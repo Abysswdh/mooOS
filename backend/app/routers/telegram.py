@@ -79,3 +79,37 @@ def send_closing(
         
     except ImportError:
         raise HTTPException(status_code=500, detail="Bot module not found")
+
+
+@router.post("/request-price-poll", status_code=status.HTTP_200_OK)
+def request_price_poll(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Trigger price voting messages to all configured Telegram groups."""
+    try:
+        from app.bot import bot
+        from app.config import get_settings as get_app_settings
+        if not bot:
+            raise HTTPException(status_code=503, detail="Telegram bot is not configured")
+
+        app_settings = get_app_settings()
+        sent_count = 0
+        groups = {
+            "pakan": (app_settings.TELEGRAM_GROUP_PAKAN, "🌾 *Sesi Harga Pakan*\n\nKirim harga pakan Anda (per kg):\n`pakan <harga>` — contoh: `pakan 3500`\n\nBot pilih harga *termurah*. Ketik /tutup\\_harga untuk tutup sesi."),
+            "susu": (app_settings.TELEGRAM_GROUP_SUSU, "🥛 *Sesi Harga Susu*\n\nKirim harga beli susu Anda (per liter):\n`susu <harga>` — contoh: `susu 7000`\n\nBot pilih harga *tertinggi*. Ketik /tutup\\_harga untuk tutup sesi."),
+            "pupuk": (app_settings.TELEGRAM_GROUP_PUPUK, "🌿 *Sesi Harga Pupuk*\n\nKirim harga beli pupuk Anda (per kg):\n`pupuk <harga>` — contoh: `pupuk 2000`\n\nBot pilih harga *tertinggi*. Ketik /tutup\\_harga untuk tutup sesi."),
+        }
+
+        for item, (group_id, msg) in groups.items():
+            if group_id:
+                try:
+                    bot.send_message(group_id, msg, parse_mode="Markdown")
+                    sent_count += 1
+                except Exception as e:
+                    print(f"Failed to send price poll to {item} group ({group_id}): {e}")
+
+        return {"status": "success", "sent_count": sent_count, "total_groups": len([g for g in groups.values() if g[0]])}
+
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Bot module not found")

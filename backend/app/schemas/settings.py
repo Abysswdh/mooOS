@@ -2,12 +2,12 @@ from pydantic import BaseModel
 
 class SettingsUpdate(BaseModel):
     koperasi_name: str | None = None
-    koperasi_address: str | None = None
-    telegram_notifications_enabled: bool | None = None
-    auto_price_fluctuation_enabled: bool | None = None
+    address: str | None = None
+    enable_telegram_notif: bool | None = None
+    auto_price_fluctuation: bool | None = None
 
 class SettingsResponse(BaseModel):
     koperasi_name: str
-    koperasi_address: str
-    telegram_notifications_enabled: bool
-    auto_price_fluctuation_enabled: bool
+    address: str
+    enable_telegram_notif: bool
+    auto_price_fluctuation: bool
