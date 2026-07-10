@@ -1,14 +1,14 @@
 // =============================================================================
 // MooOS v2 — useCows Hook (Convention #5)
 // =============================================================================
-// Every page that needs cow data imports from here. Never standalone fetch().
+// Synced with Axel's CowResponse, CowListResponse, CowCreate, CowUpdate
 // =============================================================================
 
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '@/lib/api';
-import type { Cow, CreateCowInput, PaginatedResponse } from '@/types';
+import type { Cow, CowCreateInput, CowUpdateInput, ListResponse } from '@/types';
 
 interface UseCowsReturn {
   cows: Cow[];
@@ -26,16 +26,17 @@ interface UseCowReturn {
 }
 
 interface UseCowMutationsReturn {
-  createCow: (data: CreateCowInput) => Promise<Cow>;
-  updateCow: (id: number, data: Partial<CreateCowInput>) => Promise<Cow>;
+  createCow: (data: CowCreateInput) => Promise<Cow>;
+  updateCow: (id: number, data: CowUpdateInput) => Promise<Cow>;
   deleteCow: (id: number) => Promise<void>;
   isSubmitting: boolean;
 }
 
 /**
- * Fetch all cows (or paginated).
+ * Fetch all cows.
+ * Backend returns: { items: CowResponse[], total: int }
  */
-export function useCows(page = 1, perPage = 50): UseCowsReturn {
+export function useCows(): UseCowsReturn {
   const [cows, setCows] = useState<Cow[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +50,7 @@ export function useCows(page = 1, perPage = 50): UseCowsReturn {
     setIsLoading(true);
     setError(null);
 
-    apiGet<PaginatedResponse<Cow>>(`/cows?page=${page}&per_page=${perPage}`)
+    apiGet<ListResponse<Cow>>('/cows')
       .then((res) => {
         if (!cancelled) {
           setCows(res.items);
@@ -66,7 +67,7 @@ export function useCows(page = 1, perPage = 50): UseCowsReturn {
       });
 
     return () => { cancelled = true; };
-  }, [page, perPage, trigger]);
+  }, [trigger]);
 
   return { cows, total, isLoading, error, refetch };
 }
@@ -118,7 +119,7 @@ export function useCow(id: number | null): UseCowReturn {
 export function useCowMutations(): UseCowMutationsReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const createCow = useCallback(async (data: CreateCowInput): Promise<Cow> => {
+  const createCow = useCallback(async (data: CowCreateInput): Promise<Cow> => {
     setIsSubmitting(true);
     try {
       return await apiPost<Cow>('/cows', data);
@@ -127,7 +128,7 @@ export function useCowMutations(): UseCowMutationsReturn {
     }
   }, []);
 
-  const updateCow = useCallback(async (id: number, data: Partial<CreateCowInput>): Promise<Cow> => {
+  const updateCow = useCallback(async (id: number, data: CowUpdateInput): Promise<Cow> => {
     setIsSubmitting(true);
     try {
       return await apiPut<Cow>(`/cows/${id}`, data);

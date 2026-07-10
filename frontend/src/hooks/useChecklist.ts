@@ -1,14 +1,14 @@
 // =============================================================================
 // MooOS v2 — useChecklist Hook (Convention #5)
 // =============================================================================
-// Fetches MRP-generated checklist tasks. Polls every 30s for updates.
+// Synced with Axel's ChecklistResponse, ChecklistTaskResponse
 // =============================================================================
 
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiGet, apiPost, ApiError } from '@/lib/api';
-import type { ChecklistTask } from '@/types';
+import type { ChecklistTask, ChecklistResponse } from '@/types';
 
 const POLL_INTERVAL_MS = 30_000; // 30 seconds
 
@@ -19,11 +19,13 @@ interface UseChecklistReturn {
   isLoading: boolean;
   error: string | null;
   refetch: () => void;
-  completeTask: (taskId: string) => Promise<void>;
+  completeTask: (taskId: number) => Promise<void>;
 }
 
 export function useChecklist(): UseChecklistReturn {
   const [tasks, setTasks] = useState<ChecklistTask[]>([]);
+  const [completedCount, setCompletedCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [trigger, setTrigger] = useState(0);
@@ -31,15 +33,19 @@ export function useChecklist(): UseChecklistReturn {
 
   const refetch = useCallback(() => setTrigger((t) => t + 1), []);
 
-  // Fetch checklist
+  // Fetch checklist — Axel returns { tasks, total, completed_count }
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
     setError(null);
 
-    apiGet<{ tasks: ChecklistTask[] }>('/checklist')
+    apiGet<ChecklistResponse>('/checklist')
       .then((res) => {
-        if (!cancelled) setTasks(res.tasks);
+        if (!cancelled) {
+          setTasks(res.tasks);
+          setTotalCount(res.total);
+          setCompletedCount(res.completed_count);
+        }
       })
       .catch((err) => {
         if (!cancelled) {
@@ -61,16 +67,14 @@ export function useChecklist(): UseChecklistReturn {
     };
   }, [refetch]);
 
-  // Mark task as complete
-  const completeTask = useCallback(async (taskId: string) => {
-    await apiPost(`/checklist/${taskId}/complete`, {});
+  // Mark task as complete — task id is number (int from DB)
+  const completeTask = useCallback(async (taskId: number) => {
+    await apiPost(`/checklist/${taskId}/complete`, { task_id: taskId });
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, completed: true } : t))
     );
+    setCompletedCount((prev) => prev + 1);
   }, []);
-
-  const completedCount = tasks.filter((t) => t.completed).length;
-  const totalCount = tasks.length;
 
   return { tasks, completedCount, totalCount, isLoading, error, refetch, completeTask };
 }

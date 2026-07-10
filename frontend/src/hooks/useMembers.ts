@@ -1,12 +1,14 @@
 // =============================================================================
 // MooOS v2 — useMembers Hook (Convention #5)
 // =============================================================================
+// Synced with Axel's MemberResponse, MemberListResponse, MemberCreate, MemberUpdate
+// =============================================================================
 
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '@/lib/api';
-import type { Member, CreateMemberInput, PaginatedResponse } from '@/types';
+import type { Member, MemberCreateInput, MemberUpdateInput, ListResponse } from '@/types';
 
 interface UseMembersReturn {
   members: Member[];
@@ -17,16 +19,17 @@ interface UseMembersReturn {
 }
 
 interface UseMemberMutationsReturn {
-  createMember: (data: CreateMemberInput) => Promise<Member>;
-  updateMember: (id: number, data: Partial<CreateMemberInput>) => Promise<Member>;
+  createMember: (data: MemberCreateInput) => Promise<Member>;
+  updateMember: (id: number, data: MemberUpdateInput) => Promise<Member>;
   deleteMember: (id: number) => Promise<void>;
   isSubmitting: boolean;
 }
 
 /**
  * Fetch all members.
+ * Backend returns: { items: MemberResponse[], total: int }
  */
-export function useMembers(page = 1, perPage = 50): UseMembersReturn {
+export function useMembers(): UseMembersReturn {
   const [members, setMembers] = useState<Member[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,7 +43,7 @@ export function useMembers(page = 1, perPage = 50): UseMembersReturn {
     setIsLoading(true);
     setError(null);
 
-    apiGet<PaginatedResponse<Member>>(`/members?page=${page}&per_page=${perPage}`)
+    apiGet<ListResponse<Member>>('/members')
       .then((res) => {
         if (!cancelled) {
           setMembers(res.items);
@@ -57,7 +60,7 @@ export function useMembers(page = 1, perPage = 50): UseMembersReturn {
       });
 
     return () => { cancelled = true; };
-  }, [page, perPage, trigger]);
+  }, [trigger]);
 
   return { members, total, isLoading, error, refetch };
 }
@@ -68,7 +71,7 @@ export function useMembers(page = 1, perPage = 50): UseMembersReturn {
 export function useMemberMutations(): UseMemberMutationsReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const createMember = useCallback(async (data: CreateMemberInput): Promise<Member> => {
+  const createMember = useCallback(async (data: MemberCreateInput): Promise<Member> => {
     setIsSubmitting(true);
     try {
       return await apiPost<Member>('/members', data);
@@ -77,7 +80,7 @@ export function useMemberMutations(): UseMemberMutationsReturn {
     }
   }, []);
 
-  const updateMember = useCallback(async (id: number, data: Partial<CreateMemberInput>): Promise<Member> => {
+  const updateMember = useCallback(async (id: number, data: MemberUpdateInput): Promise<Member> => {
     setIsSubmitting(true);
     try {
       return await apiPut<Member>(`/members/${id}`, data);

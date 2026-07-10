@@ -1,14 +1,14 @@
 // =============================================================================
 // MooOS v2 — useDashboard Hook (Convention #5)
 // =============================================================================
-// Single entry point for all dashboard data. Composes multiple API calls.
+// Synced with Axel's DashboardSummary, AttendanceLogResponse
 // =============================================================================
 
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet, apiPost, ApiError } from '@/lib/api';
-import type { DashboardSummary, AttendanceLog } from '@/types';
+import type { DashboardSummary, AttendanceLog, AttendanceClockIn } from '@/types';
 
 interface UseDashboardReturn {
   summary: DashboardSummary | null;
@@ -28,6 +28,9 @@ interface UseAttendanceReturn {
 
 /**
  * Fetch dashboard summary KPIs.
+ * Axel's fields: total_cows, active_cows, sick_cows, total_members,
+ *   today_milk_liters, feed_stock_kg, feed_days_remaining, feed_is_critical,
+ *   fertilizer_ready_kg, today_revenue, month_revenue
  */
 export function useDashboard(): UseDashboardReturn {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -63,6 +66,8 @@ export function useDashboard(): UseDashboardReturn {
 
 /**
  * Manage attendance (absen masuk/pulang).
+ * Clock-in returns: { id, user_id, clock_in }
+ * Clock-out returns: { id, user_id, clock_in, clock_out, daily_summary }
  */
 export function useAttendance(): UseAttendanceReturn {
   const [attendance, setAttendance] = useState<AttendanceLog | null>(null);
@@ -79,7 +84,7 @@ export function useAttendance(): UseAttendanceReturn {
         if (!cancelled) setAttendance(res);
       })
       .catch(() => {
-        // If no attendance today, that's fine
+        // No attendance today — that's fine
         if (!cancelled) setAttendance(null);
       })
       .finally(() => {
@@ -94,8 +99,16 @@ export function useAttendance(): UseAttendanceReturn {
   const clockIn = useCallback(async () => {
     setIsSubmitting(true);
     try {
-      const res = await apiPost<AttendanceLog>('/attendance/clock-in', {});
-      setAttendance(res);
+      const res = await apiPost<AttendanceClockIn>('/attendance/clock-in', {});
+      // Promote to full AttendanceLog shape
+      setAttendance({
+        id: res.id,
+        user_id: res.user_id,
+        clock_in: res.clock_in,
+        clock_out: null,
+        daily_summary: null,
+        created_at: res.clock_in,
+      });
     } finally {
       setIsSubmitting(false);
     }

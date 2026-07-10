@@ -1,12 +1,13 @@
 // =============================================================================
 // MooOS v2 — Shared TypeScript Types
 // =============================================================================
-// These types mirror the backend Pydantic schemas (backend/app/schemas/).
-// ANY change here MUST be synced with Axel's Pydantic response schemas.
+// These types mirror Axel's Pydantic schemas (backend/app/schemas/).
+// ANY change here MUST be synced with the backend schemas.
+// Last synced: 2026-07-10 — commit d054d22 (axel/backend)
 // =============================================================================
 
 // ---------------------------------------------------------------------------
-// Enums
+// Enums (frontend convenience — backend uses loose strings)
 // ---------------------------------------------------------------------------
 
 export type CowStatus =
@@ -17,6 +18,8 @@ export type CowStatus =
   | 'LOOKING_FOR_CARETAKER';
 
 export type CowGender = 'MALE' | 'FEMALE';
+
+export type CowType = 'DAIRY' | 'BEEF';
 
 export type OfferStatus = 'OPEN' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
 
@@ -51,77 +54,96 @@ export type UserRole = 'ADMIN' | 'PJ_KANDANG' | 'SUPPLIER' | 'BUYER';
 export type WasteBatchStatus = 'COLLECTING' | 'PROCESSING' | 'READY' | 'SOLD';
 
 // ---------------------------------------------------------------------------
-// Entities
+// Entities — synced with Axel's Pydantic Response schemas
 // ---------------------------------------------------------------------------
 
-/** Admin user (web dashboard) */
+/** Admin user (web dashboard) — backend/app/schemas/user.py */
 export interface User {
   id: number;
   email: string;
   name: string;
-  role: UserRole;
-  created_at: string; // ISO 8601
+  role: string;
+  created_at: string;
 }
 
-/** Anggota koperasi (cow owner) */
+/** Anggota koperasi — backend/app/schemas/member.py → MemberResponse */
 export interface Member {
   id: number;
+  nik: string;
   name: string;
-  phone: string;
-  address: string;
-  cow_count: number;
+  phone: string | null;
+  address: string | null;
+  simpanan_pokok: number;
+  simpanan_wajib: number;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
-/** Kandang */
+/** Kandang — backend/app/schemas/barn.py */
 export interface Barn {
   id: number;
-  name: string;        // e.g. "Kandang A"
+  name: string;
   location: string;
-  pj_name: string;     // Nama PJ Kandang
+  pj_name: string;
   cow_count: number;
   created_at: string;
 }
 
-/** Sapi */
+/** Sapi — backend/app/schemas/cow.py → CowResponse */
 export interface Cow {
   id: number;
-  code: string;         // e.g. "S012"
-  name: string;
-  gender: CowGender;
-  breed: string;        // e.g. "Friesian Holstein"
-  birth_date: string;   // ISO date
+  code: string;
+  name: string | null;
+  breed: string | null;
+  gender: string;
+  cow_type: string;
   weight_kg: number;
-  status: CowStatus;
-  barn_id: number;
-  barn_name: string;    // denormalized for display
-  owner_id: number;
-  owner_name: string;   // denormalized for display
+  birth_date: string | null;
   photo_url: string | null;
-  litre_milked_today: number;
+  status: string;
+  owner_id: number | null;
+  barn_id: number | null;
   created_at: string;
+  updated_at: string;
 }
 
-/** Daily milk production record per cow */
+/** Milk production record — backend/app/schemas/milk.py → MilkRecordResponse */
 export interface MilkRecord {
   id: number;
   cow_id: number;
-  cow_code: string;
-  litres: number;
-  recorded_at: string;
-  recorded_by: string;  // PJ Kandang name
-}
-
-/** Daily milk summary (aggregated) */
-export interface MilkSummary {
   date: string;
-  total_litres: number;
-  cow_count: number;
-  avg_per_cow: number;
+  liters: number;
+  recorded_by: string | null;
+  created_at: string;
 }
 
-/** Cow health log */
+/** Milk summary (aggregated) — backend/app/schemas/milk.py → MilkSummaryResponse */
+export interface MilkSummary {
+  today_total_liters: number;
+  yesterday_total_liters: number;
+  week_total_liters: number;
+  month_total_liters: number;
+  active_dairy_cows: number;
+}
+
+/** Milk offer — backend/app/schemas/milk.py → MilkOfferResponse */
+export interface MilkOffer {
+  id: number;
+  quantity_liters: number;
+  price_per_liter: number;
+  total_price: number;
+  min_order_liters: number;
+  status: string;
+  accepted_by: string | null;
+  accepted_quantity: number | null;
+  notes: string | null;
+  expires_at: string | null;
+  created_at: string;
+  confirmed_at: string | null;
+}
+
+/** Cow health log — backend/app/schemas/health_log.py */
 export interface HealthLog {
   id: number;
   cow_id: number;
@@ -132,158 +154,238 @@ export interface HealthLog {
   handled: boolean;
 }
 
-/** Feed stock summary */
+/** Feed stock — backend/app/schemas/feed.py → FeedStockResponse */
 export interface FeedStock {
   current_stock_kg: number;
-  daily_need_kg: number;
+  daily_consumption_kg: number;
   days_remaining: number;
-  last_updated: string;
+  is_critical: boolean;
 }
 
-/** Feed purchase order */
+/** Feed purchase order — backend/app/schemas/feed.py → FeedOrderResponse */
 export interface FeedOrder {
   id: number;
+  po_number: string;
   quantity_kg: number;
+  feed_type: string;
   max_price_per_kg: number;
   total_max_price: number;
-  status: OfferStatus;
-  accepted_by: string | null;  // supplier name
-  created_at: string;
-  confirmed_at: string | null;
-}
-
-/** Generic offer (used for susu & pupuk too) */
-export interface Offer {
-  id: number;
-  offer_type: OfferType;
-  quantity: number;
-  unit: string;           // "kg" | "liter"
-  price_per_unit: number;
-  total_price: number;
-  status: OfferStatus;
+  status: string;
   accepted_by: string | null;
+  accepted_price_per_kg: number | null;
+  notes: string | null;
+  expires_at: string | null;
   created_at: string;
   confirmed_at: string | null;
 }
 
-/** Waste/fertilizer batch */
+/** Feed stock movement — backend/app/schemas/feed.py → FeedStockMovementResponse */
+export interface FeedStockMovement {
+  id: number;
+  date: string;
+  change_kg: number;
+  reason: string;
+  created_at: string;
+}
+
+/** Waste/fertilizer batch — backend/app/schemas/waste.py */
 export interface WasteBatch {
   id: number;
   barn_id: number;
   barn_name: string;
   quantity_kg: number;
-  status: WasteBatchStatus;
+  status: string;
   created_at: string;
   ready_at: string | null;
 }
 
-/** Daily market price */
+/** Daily market price — backend/app/schemas/market_price.py */
 export interface MarketPrice {
   id: number;
   date: string;
-  item_type: MarketPriceItemType;
+  item_type: string;
   price: number;
-  source: MarketPriceSource;
+  source: string;
   created_at: string;
 }
 
-/** Attendance log */
+/** Attendance log — backend/app/schemas/attendance.py → AttendanceLogResponse */
 export interface AttendanceLog {
   id: number;
   user_id: number;
   clock_in: string;
   clock_out: string | null;
   daily_summary: string | null;
+  created_at: string;
 }
 
-/** Notification */
+/** Attendance clock-in response (subset) */
+export interface AttendanceClockIn {
+  id: number;
+  user_id: number;
+  clock_in: string;
+}
+
+/** Notification — backend/app/schemas/notification.py → NotificationResponse */
 export interface Notification {
   id: number;
-  type: NotificationType;
+  user_id: number;
+  type: string;
   title: string;
-  message: string;
+  message: string | null;
   read: boolean;
   created_at: string;
 }
 
-/** MRP-generated checklist task */
+/** MRP-generated checklist task — backend/app/schemas/checklist.py → ChecklistTaskResponse */
 export interface ChecklistTask {
-  id: string;
-  priority: ChecklistPriority;
+  id: number;
+  date: string;
+  priority: string;
   title: string;
-  description: string;
-  action_type: ChecklistActionType;
-  action_payload: Record<string, unknown>;
+  description: string | null;
+  action_type: string;
+  action_payload: string | null;
   completed: boolean;
+  completed_at: string | null;
+  created_at: string;
 }
 
 // ---------------------------------------------------------------------------
-// API Response Wrappers
+// API Response Wrappers — synced with Axel's ListResponse patterns
 // ---------------------------------------------------------------------------
 
-/** Dashboard summary (GET /dashboard/summary) */
-export interface DashboardSummary {
-  total_cows: number;
-  healthy_cows: number;
-  sick_cows: number;
-  total_milk_today: number;
-  feed_stock_kg: number;
-  feed_days_remaining: number;
-  active_members: number;
-  total_revenue_month: number;
-  attendance_today: AttendanceLog | null;
-}
-
-/** Auth response (POST /auth/login) */
-export interface AuthResponse {
-  user: User;
-  access_token: string;
-  token_type: 'bearer';
-}
-
-/** Paginated list response */
-export interface PaginatedResponse<T> {
+/** Generic list response (Axel's pattern: { items, total }) */
+export interface ListResponse<T> {
   items: T[];
   total: number;
-  page: number;
-  per_page: number;
-  total_pages: number;
 }
 
-/** Market price input (POST /prices) */
-export interface MarketPriceInput {
-  item_type: MarketPriceItemType;
-  price: number;
+/** Dashboard summary — backend/app/schemas/dashboard.py → DashboardSummary */
+export interface DashboardSummary {
+  total_cows: number;
+  active_cows: number;
+  sick_cows: number;
+  total_members: number;
+  today_milk_liters: number;
+  feed_stock_kg: number;
+  feed_days_remaining: number;
+  feed_is_critical: boolean;
+  fertilizer_ready_kg: number;
+  today_revenue: number;
+  month_revenue: number;
 }
 
-/** Create offer input */
-export interface CreateOfferInput {
-  offer_type: OfferType;
-  quantity: number;
-  price_per_unit: number;
+/** Checklist response wrapper */
+export interface ChecklistResponse {
+  tasks: ChecklistTask[];
+  total: number;
+  completed_count: number;
 }
 
-/** Login input */
+/** Notification list response */
+export interface NotificationListResponse {
+  items: Notification[];
+  total: number;
+  unread_count: number;
+}
+
+/** Auth token response — backend/app/schemas/auth.py → TokenResponse */
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+}
+
+/** Health check — backend/app/schemas/dashboard.py → HealthCheckResponse */
+export interface HealthCheckResponse {
+  status: string;
+  database: string;
+  version: string;
+}
+
+// ---------------------------------------------------------------------------
+// Request Inputs — synced with Axel's Create/Update schemas
+// ---------------------------------------------------------------------------
+
+/** POST /auth/login */
 export interface LoginInput {
   email: string;
   password: string;
 }
 
-/** Create cow input */
-export interface CreateCowInput {
+/** POST /cows — backend/app/schemas/cow.py → CowCreate */
+export interface CowCreateInput {
   code: string;
-  name: string;
-  gender: CowGender;
-  breed: string;
-  birth_date: string;
-  weight_kg: number;
-  barn_id: number;
-  owner_id: number;
+  name?: string | null;
+  breed?: string | null;
+  gender?: string;
+  cow_type?: string;
+  weight_kg?: number;
+  birth_date?: string | null;
+  owner_id?: number | null;
+  barn_id?: number | null;
 }
 
-/** Create member input */
-export interface CreateMemberInput {
+/** PUT /cows/:id — backend/app/schemas/cow.py → CowUpdate */
+export interface CowUpdateInput {
+  name?: string | null;
+  breed?: string | null;
+  gender?: string | null;
+  cow_type?: string | null;
+  weight_kg?: number | null;
+  birth_date?: string | null;
+  status?: string | null;
+  owner_id?: number | null;
+  barn_id?: number | null;
+  photo_url?: string | null;
+}
+
+/** POST /members — backend/app/schemas/member.py → MemberCreate */
+export interface MemberCreateInput {
+  nik: string;
   name: string;
-  phone: string;
-  address: string;
+  phone?: string | null;
+  address?: string | null;
+  simpanan_pokok?: number;
+  simpanan_wajib?: number;
+}
+
+/** PUT /members/:id — backend/app/schemas/member.py → MemberUpdate */
+export interface MemberUpdateInput {
+  name?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  simpanan_pokok?: number | null;
+  simpanan_wajib?: number | null;
+  is_active?: boolean | null;
+}
+
+/** POST /feed/orders — backend/app/schemas/feed.py → FeedOrderCreate */
+export interface FeedOrderCreateInput {
+  quantity_kg: number;
+  feed_type?: string;
+  max_price_per_kg: number;
+}
+
+/** POST /milk/offers — backend/app/schemas/milk.py → MilkOfferCreate */
+export interface MilkOfferCreateInput {
+  quantity_liters: number;
+  price_per_liter: number;
+  min_order_liters?: number;
+}
+
+/** POST /prices */
+export interface MarketPriceInput {
+  item_type: MarketPriceItemType;
+  price: number;
+}
+
+/** POST /notifications/read */
+export interface NotificationMarkReadInput {
+  notification_ids: number[];
+}
+
+/** POST /checklist/:id/complete */
+export interface ChecklistCompleteInput {
+  task_id: number;
 }
