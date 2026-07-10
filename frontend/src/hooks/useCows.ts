@@ -29,6 +29,7 @@ interface UseCowMutationsReturn {
   createCow: (data: CowCreateInput) => Promise<Cow>;
   updateCow: (id: number, data: CowUpdateInput) => Promise<Cow>;
   deleteCow: (id: number) => Promise<void>;
+  sellCow: (id: number) => Promise<Cow>;
   isSubmitting: boolean;
 }
 
@@ -146,5 +147,14 @@ export function useCowMutations(): UseCowMutationsReturn {
     }
   }, []);
 
-  return { createCow, updateCow, deleteCow, isSubmitting };
+  const sellCow = useCallback(async (id: number): Promise<Cow> => {
+    setIsSubmitting(true);
+    try {
+      return await apiPost<Cow>(`/cows/${id}/sell`, {});
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, []);
+
+  return { createCow, updateCow, deleteCow, sellCow, isSubmitting };
 }

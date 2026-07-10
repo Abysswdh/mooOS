@@ -118,10 +118,16 @@ if bot:
                 cow = db.query(Cow).filter(Cow.id == int(cow_id)).first()
                 barn_id = cow.barn_id if cow and cow.barn_id else 1 # fallback
                 
+                # Generate a unique batch code
+                import uuid
+                batch_code = f"WB-{datetime.date.today().strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}"
+                
                 record = WasteBatch(
                     barn_id=barn_id,
+                    batch_code=batch_code,
                     raw_waste_kg=kg,
-                    status="COLLECTED"
+                    estimated_fertilizer_kg=kg * 0.5, # Assuming 50% yield for estimation
+                    status="COLLECTING"
                 )
                 db.add(record)
                 db.commit()

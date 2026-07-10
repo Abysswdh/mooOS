@@ -24,23 +24,22 @@ interface CowDetailModalProps {
 }
 
 export function CowDetailModal({ cow, isOpen, onClose, onUpdated }: CowDetailModalProps) {
-  const { updateCow, isSubmitting } = useCowMutations();
+  const { sellCow, isSubmitting } = useCowMutations();
   const [isSelling, setIsSelling] = useState(false);
 
   if (!cow) return null;
 
   // The Telegram bot deep link format
-  const qrValue = `https://t.me/mooos_bot?start=cow_${cow.id}`;
+  const qrValue = `https://t.me/MooOS_AdminBot?start=cow_${cow.id}`;
 
   const handleJualSapi = async () => {
-    if (!window.confirm(`Anda yakin ingin menjual sapi ${cow.code}? Aksi ini akan mengubah statusnya menjadi Terjual dan mengarsipkan datanya.`)) {
+    if (!window.confirm(`Anda yakin ingin menjual sapi ${cow.code}? Aksi ini akan mengubah statusnya menjadi Terjual dan mengirimkan notifikasi ke PJ Kandang.`)) {
       return;
     }
 
     try {
       setIsSelling(true);
-      const updateData: CowUpdateInput = { status: 'SOLD' };
-      await updateCow(cow.id, updateData);
+      await sellCow(cow.id);
       toastSuccess(`Sapi ${cow.code} berhasil dijual`);
       onUpdated();
       onClose();
@@ -53,7 +52,7 @@ export function CowDetailModal({ cow, isOpen, onClose, onUpdated }: CowDetailMod
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[525px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detail Sapi - {cow.code}</DialogTitle>
         </DialogHeader>
@@ -66,7 +65,7 @@ export function CowDetailModal({ cow, isOpen, onClose, onUpdated }: CowDetailMod
             Scan QR Code ini menggunakan bot Telegram MooOS untuk melaporkan produksi susu atau limbah.
           </div>
 
-          <div className="grid grid-cols-2 gap-y-2 text-sm">
+          <div className="grid grid-cols-2 gap-y-2 text-sm border p-4 rounded-md bg-muted/20">
             <div className="text-muted-foreground">Nama</div>
             <div className="font-medium">{cow.name || '-'}</div>
 
@@ -89,6 +88,22 @@ export function CowDetailModal({ cow, isOpen, onClose, onUpdated }: CowDetailMod
 
             <div className="text-muted-foreground">Kandang</div>
             <div className="font-medium">{cow.barn_id ? `Kandang #${cow.barn_id}` : '-'}</div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 mt-2">
+            <div className="border p-3 rounded-md">
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">Riwayat Kesehatan</h4>
+              <div className="text-sm italic text-muted-foreground text-center py-4">
+                (Belum ada catatan kesehatan)
+              </div>
+            </div>
+            
+            <div className="border p-3 rounded-md">
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">Riwayat Susu (7 Hari)</h4>
+              <div className="text-sm italic text-muted-foreground text-center py-4">
+                (Belum ada catatan susu)
+              </div>
+            </div>
           </div>
         </div>
 
