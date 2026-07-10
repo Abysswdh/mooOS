@@ -4,7 +4,7 @@ import { useDashboard } from '@/hooks/useDashboard';
 import { KPICard } from '@/components/ui/KPICard';
 import { AbsensiCard } from '@/components/features/AbsensiCard';
 import { ChecklistPanel } from '@/components/features/ChecklistPanel';
-import { formatNumber, formatCurrency } from '@/lib/formatters';
+import { formatNumber, formatRp } from '@/lib/formatters';
 import { Beef, Droplets, Wheat, TrendingUp } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -40,7 +40,7 @@ export default function DashboardPage() {
         />
         <KPICard
           title="Estimasi Pendapatan"
-          value={summary ? formatCurrency(summary.today_revenue_est) : "Rp0"}
+          value={summary ? formatRp(summary.today_revenue_est) : "Rp0"}
           icon={<TrendingUp className="h-4 w-4" />}
           description="Hari ini (Kotor)"
           isLoading={isLoading}

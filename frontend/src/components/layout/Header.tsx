@@ -81,11 +81,9 @@ export function Header() {
 
         {/* User Menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <UserCircle className="h-6 w-6" />
-              <span className="sr-only">Menu Profil</span>
-            </Button>
+          <DropdownMenuTrigger className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border-none bg-transparent">
+            <UserCircle className="h-6 w-6" />
+            <span className="sr-only">Menu Profil</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Akun Saya</DropdownMenuLabel>

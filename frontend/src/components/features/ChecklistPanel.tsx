@@ -2,13 +2,14 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useChecklist, useChecklistMutations } from '@/hooks/useChecklist';
+import { useChecklist } from '@/hooks/useChecklist';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CheckCircle2, Circle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ChecklistPriority } from '@/types';
+import { useState } from 'react';
 
 function PriorityBadge({ priority }: { priority: ChecklistPriority }) {
   if (priority === 'HIGH') {
@@ -21,8 +22,8 @@ function PriorityBadge({ priority }: { priority: ChecklistPriority }) {
 }
 
 export function ChecklistPanel() {
-  const { tasks, isLoading, error, refetch } = useChecklist();
-  const { completeTask, isSubmitting } = useChecklistMutations();
+  const { tasks, isLoading, error, refetch, completeTask } = useChecklist();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (isLoading) {
     return (
@@ -83,8 +84,13 @@ export function ChecklistPanel() {
                     isSubmitting && "opacity-50 cursor-not-allowed"
                   )}
                   onClick={async () => {
-                    await completeTask(task.id, "Diselesaikan via Web");
-                    refetch();
+                    setIsSubmitting(true);
+                    try {
+                      await completeTask(task.id);
+                      refetch();
+                    } finally {
+                      setIsSubmitting(false);
+                    }
                   }}
                   disabled={isSubmitting}
                 >

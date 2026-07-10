@@ -12,7 +12,7 @@ import {
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { formatCurrency } from '@/lib/formatters';
+import { formatRp } from '@/lib/formatters';
 
 export function MemberTable() {
   const { members, total, isLoading, error, refetch } = useMembers();
@@ -43,8 +43,8 @@ export function MemberTable() {
                 <div>{member.email}</div>
                 <div className="text-xs text-muted-foreground">{member.phone_number || '-'}</div>
               </TableCell>
-              <TableCell>{formatCurrency(member.simpanan_pokok)}</TableCell>
-              <TableCell>{formatCurrency(member.simpanan_wajib)}</TableCell>
+              <TableCell>{formatRp(member.simpanan_pokok)}</TableCell>
+              <TableCell>{formatRp(member.simpanan_wajib)}</TableCell>
               <TableCell className="text-center font-bold">
                 {member.cow_count || 0}
               </TableCell>
