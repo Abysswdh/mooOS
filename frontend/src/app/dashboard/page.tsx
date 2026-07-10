@@ -4,6 +4,7 @@ import { useDashboard } from '@/hooks/useDashboard';
 import { KPICard } from '@/components/ui/KPICard';
 import { AbsensiCard } from '@/components/features/AbsensiCard';
 import { ChecklistPanel } from '@/components/features/ChecklistPanel';
+import { StaticChecklist } from '@/components/features/StaticChecklist';
 import { formatNumber, formatRp } from '@/lib/formatters';
 import { Beef, Droplets, Wheat, TrendingUp } from 'lucide-react';
 
@@ -50,7 +51,10 @@ export default function DashboardPage() {
 
       {/* Middle Row: Main Features */}
       <div className="grid gap-6 md:grid-cols-12 h-full">
-        <div className="md:col-span-8 h-[500px]">
+        <div className="md:col-span-4 h-[500px]">
+          <StaticChecklist />
+        </div>
+        <div className="md:col-span-4 h-[500px]">
           <ChecklistPanel />
         </div>
         <div className="md:col-span-4 h-[500px]">

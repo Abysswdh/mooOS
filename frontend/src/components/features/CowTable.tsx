@@ -14,6 +14,11 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatNumber } from '@/lib/formatters';
+import { Button } from '@/components/ui/button';
+import { QrCode } from 'lucide-react';
+import { CowDetailModal } from './CowDetailModal';
+import { useState } from 'react';
+import type { Cow } from '@/types';
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string }> = {
@@ -30,6 +35,8 @@ function StatusBadge({ status }: { status: string }) {
 
 export function CowTable() {
   const { cows, total, isLoading, error, refetch } = useCows();
+  const [selectedCow, setSelectedCow] = useState<Cow | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   if (isLoading) return <LoadingSpinner />;
   if (error) return <ErrorState message={error} onRetry={refetch} />;
@@ -46,6 +53,7 @@ export function CowTable() {
             <TableHead>Status</TableHead>
             <TableHead>Tipe & Gender</TableHead>
             <TableHead className="text-right">Berat (Kg)</TableHead>
+            <TableHead className="text-center">Aksi</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -61,6 +69,19 @@ export function CowTable() {
                 {cow.cow_type === 'DAIRY' ? 'Perah' : 'Potong'} • {cow.gender === 'FEMALE' ? 'Betina' : 'Jantan'}
               </TableCell>
               <TableCell className="text-right">{formatNumber(cow.weight_kg)}</TableCell>
+              <TableCell className="text-center">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    setSelectedCow(cow);
+                    setIsDetailOpen(true);
+                  }}
+                  title="Detail & QR Code"
+                >
+                  <QrCode className="w-4 h-4" />
+                </Button>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -68,6 +89,13 @@ export function CowTable() {
       <div className="p-4 border-t text-sm text-muted-foreground">
         Menampilkan {cows.length} dari {total} total sapi.
       </div>
+      
+      <CowDetailModal 
+        cow={selectedCow} 
+        isOpen={isDetailOpen} 
+        onClose={() => setIsDetailOpen(false)} 
+        onUpdated={refetch}
+      />
     </div>
   );
 }

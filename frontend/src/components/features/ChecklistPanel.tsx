@@ -6,10 +6,11 @@ import { useChecklist } from '@/hooks/useChecklist';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { CheckCircle2, Circle, AlertCircle } from 'lucide-react';
+import { CheckCircle2, Circle, AlertCircle, ExternalLink, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { ChecklistPriority } from '@/types';
+import type { ChecklistPriority, ChecklistActionType } from '@/types';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 function PriorityBadge({ priority }: { priority: ChecklistPriority }) {
   if (priority === 'HIGH') {
@@ -24,13 +25,28 @@ function PriorityBadge({ priority }: { priority: ChecklistPriority }) {
 export function ChecklistPanel() {
   const { tasks, isLoading, error, refetch, completeTask } = useChecklist();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+
+  const handleAction = (action_type: string, payload: string | null) => {
+    switch (action_type as ChecklistActionType) {
+      case 'NAVIGATE':
+        if (payload) router.push(payload);
+        break;
+      case 'CREATE_PO':
+        router.push('/dashboard/pakan'); // They can open FeedOrderModal from there
+        break;
+      default:
+        // Other actions might be handled inside the page component or globally
+        break;
+    }
+  };
 
   if (isLoading) {
     return (
       <Card className="h-full">
         <CardHeader>
-          <CardTitle>Checklist Rutinitas</CardTitle>
-          <CardDescription>Sistem MRP MooOS</CardDescription>
+          <CardTitle>Sistem Pintar MooOS (MRP)</CardTitle>
+          <CardDescription>Menganalisis data kandang...</CardDescription>
         </CardHeader>
         <CardContent className="h-64 flex items-center justify-center">
           <LoadingSpinner />
@@ -43,7 +59,7 @@ export function ChecklistPanel() {
     return (
       <Card className="h-full">
         <CardHeader>
-          <CardTitle>Checklist Rutinitas</CardTitle>
+          <CardTitle>Sistem Pintar MooOS (MRP)</CardTitle>
         </CardHeader>
         <CardContent>
           <ErrorState message={error} onRetry={refetch} />
@@ -60,11 +76,11 @@ export function ChecklistPanel() {
       <CardHeader className="pb-3 border-b">
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle className="text-lg">Checklist Harian</CardTitle>
+            <CardTitle className="text-lg">Analisis Sistem (MRP)</CardTitle>
             <CardDescription>Selesai: {completedCount} / {tasks.length}</CardDescription>
           </div>
           <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
-            {pendingTasks.length} tugas
+            {pendingTasks.length} issue
           </div>
         </div>
       </CardHeader>
@@ -102,6 +118,25 @@ export function ChecklistPanel() {
                     <PriorityBadge priority={task.priority as ChecklistPriority} />
                   </div>
                   <p className="text-xs text-muted-foreground">{task.description}</p>
+                  
+                  {task.action_type && task.action_type !== 'NONE' && (
+                    <div className="pt-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-7 text-xs"
+                        onClick={() => handleAction(task.action_type, task.action_payload)}
+                      >
+                        {task.action_type === 'CREATE_PO' ? (
+                          <><PlusCircle className="w-3 h-3 mr-1" /> Buat PO Pakan</>
+                        ) : task.action_type === 'NAVIGATE' ? (
+                          <><ExternalLink className="w-3 h-3 mr-1" /> Buka Halaman</>
+                        ) : (
+                          'Tindak Lanjut'
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
