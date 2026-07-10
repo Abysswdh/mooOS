@@ -25,3 +25,9 @@ class NotificationListResponse(BaseModel):
 
 class NotificationMarkReadRequest(BaseModel):
     notification_ids: list[int]
+
+class NotificationSendRequest(BaseModel):
+    user_id: int
+    type: str
+    title: str
+    message: str | None = None

@@ -13,10 +13,13 @@ from app.config import get_settings
 from app.database import create_all_tables
 
 
+from app.bot import start_bot_thread
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup: create tables (dev convenience). Shutdown: cleanup."""
     create_all_tables()
+    start_bot_thread()
     yield
 
 
@@ -52,11 +55,12 @@ def create_app() -> FastAPI:
     app.include_router(waste.waste_router)
     app.include_router(waste.fertilizer_router)
     
-    from app.routers import prices, attendance, notifications, health
+    from app.routers import prices, attendance, notifications, health, telegram
     app.include_router(prices.router)
     app.include_router(attendance.router)
     app.include_router(notifications.router)
     app.include_router(health.router)
+    app.include_router(telegram.router)
 
     return app
 

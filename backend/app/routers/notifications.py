@@ -8,9 +8,18 @@ from app.database import get_db
 from app.models.notification import Notification
 from app.models.user import User
 from app.schemas.notification import (
-    NotificationListResponse, NotificationMarkReadRequest
+    NotificationListResponse, NotificationMarkReadRequest, NotificationSendRequest, NotificationResponse
 )
 from app.dependencies import get_current_user
+
+# Global registry of active SSE clients
+# Map of user_id -> list of asyncio.Queue
+active_clients: dict[int, list[asyncio.Queue]] = {}
+
+def publish_event(user_id: int, event_data: dict):
+    if user_id in active_clients:
+        for q in active_clients[user_id]:
+            q.put_nowait(event_data)
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
@@ -58,6 +67,40 @@ def mark_as_read(
     return {"status": "success", "marked_count": len(notifications)}
 
 
+@router.post("/send", response_model=NotificationResponse, status_code=status.HTTP_201_CREATED)
+def send_notification(
+    request: NotificationSendRequest,
+    db: Session = Depends(get_db)
+    # Could restrict this to internal microservices or admin only, but no restriction for demo
+):
+    """Internal API to send a notification and broadcast via SSE."""
+    notification = Notification(
+        user_id=request.user_id,
+        type=request.type,
+        title=request.title,
+        message=request.message,
+        read=False
+    )
+    db.add(notification)
+    db.commit()
+    db.refresh(notification)
+    
+    # Broadcast to SSE
+    event_data = {
+        "type": "notification",
+        "data": {
+            "id": notification.id,
+            "type": notification.type,
+            "title": notification.title,
+            "message": notification.message,
+            "created_at": notification.created_at.isoformat()
+        }
+    }
+    publish_event(request.user_id, event_data)
+    
+    return notification
+
+
 @router.get("/stream")
 async def notification_stream(
     db: Session = Depends(get_db),
@@ -65,15 +108,28 @@ async def notification_stream(
 ):
     """SSE Endpoint for real-time notifications."""
     async def event_generator():
-        # In a real app, you'd use Redis Pub/Sub or similar here.
-        # This is a simple polling fallback for demo.
-        last_id = 0
-        while True:
-            # Re-fetch new notifications for this user using a new session inside the loop or async db.
-            # But standard sqlalchemy Session is synchronous. 
-            # A simple keep-alive ping for now:
-            ping_data = {"type": "ping", "message": "keep-alive"}
-            yield f"data: {json.dumps(ping_data)}\n\n"
-            await asyncio.sleep(15)
+        q = asyncio.Queue()
+        user_id = current_user.id
+        
+        if user_id not in active_clients:
+            active_clients[user_id] = []
+        active_clients[user_id].append(q)
+        
+        try:
+            # Send initial keep-alive immediately
+            yield f"data: {json.dumps({'type': 'ping', 'message': 'connected'})}\n\n"
+            
+            while True:
+                try:
+                    # Wait for an event, timeout to send keep-alive every 15s
+                    event = await asyncio.wait_for(q.get(), timeout=15.0)
+                    yield f"data: {json.dumps(event)}\n\n"
+                except asyncio.TimeoutError:
+                    yield f"data: {json.dumps({'type': 'ping', 'message': 'keep-alive'})}\n\n"
+        finally:
+            if user_id in active_clients:
+                active_clients[user_id].remove(q)
+                if not active_clients[user_id]:
+                    del active_clients[user_id]
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

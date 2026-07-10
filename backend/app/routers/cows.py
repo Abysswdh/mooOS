@@ -99,3 +99,41 @@ def delete_cow(
     db.delete(cow)
     db.commit()
     return None
+
+@router.post("/{cow_id}/sell", response_model=CowResponse)
+def sell_cow(
+    cow_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Marks a cow as SOLD and triggers notifications."""
+    from app.models.cow import CowStatus
+    
+    cow = db.query(Cow).filter(Cow.id == cow_id).first()
+    if not cow:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sapi tidak ditemukan")
+    
+    if cow.status == CowStatus.SOLD:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sapi sudah berstatus terjual")
+        
+    cow.status = CowStatus.SOLD
+    db.commit()
+    db.refresh(cow)
+    
+    # Send notification via bot to PJ_KANDANG
+    try:
+        from app.bot import bot
+        from app.models.telegram_contact import TelegramContact, TelegramContactRole
+        
+        if bot:
+            contacts = db.query(TelegramContact).filter(TelegramContact.role == TelegramContactRole.PJ_KANDANG).all()
+            msg = f"📢 *Pemberitahuan Penjualan*\n\nSapi dengan kode *{cow.code}* telah berhasil terjual. Harap perbarui data fisik di kandang."
+            for contact in contacts:
+                try:
+                    bot.send_message(contact.telegram_user_id, msg, parse_mode="Markdown")
+                except Exception as e:
+                    print(f"Failed to send telegram message to {contact.telegram_user_id}: {e}")
+    except ImportError:
+        pass
+        
+    return cow
