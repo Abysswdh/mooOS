@@ -3,7 +3,7 @@
 // =============================================================================
 // These types mirror Axel's Pydantic schemas (backend/app/schemas/).
 // ANY change here MUST be synced with the backend schemas.
-// Last synced: 2026-07-10 — commit d054d22 (axel/backend)
+// Last synced: 2026-07-10 — final sync after 5-mismatch fix
 // =============================================================================
 
 // ---------------------------------------------------------------------------
@@ -51,19 +51,23 @@ export type MarketPriceSource = 'ADMIN' | 'AUTO' | 'TELEGRAM';
 
 export type UserRole = 'ADMIN' | 'PJ_KANDANG' | 'SUPPLIER' | 'BUYER';
 
-export type WasteBatchStatus = 'COLLECTING' | 'PROCESSING' | 'READY' | 'SOLD';
+export type WasteBatchStatus = 'COLLECTING' | 'FERMENTING' | 'READY' | 'SOLD';
+
+export type HealthEventType = 'SICK' | 'RECOVERED' | 'TREATMENT' | 'DEAD' | 'CHECKUP';
 
 // ---------------------------------------------------------------------------
 // Entities — synced with Axel's Pydantic Response schemas
 // ---------------------------------------------------------------------------
 
-/** Admin user (web dashboard) — backend/app/schemas/user.py */
+/** Admin user (web dashboard) — backend/app/schemas/user.py → UserResponse */
 export interface User {
   id: number;
   email: string;
   name: string;
   role: string;
+  is_active: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 /** Anggota koperasi — backend/app/schemas/member.py → MemberResponse */
@@ -80,13 +84,13 @@ export interface Member {
   updated_at: string;
 }
 
-/** Kandang — backend/app/schemas/barn.py */
+/** Kandang — backend/app/schemas/barn.py → BarnResponse */
 export interface Barn {
   id: number;
   name: string;
-  location: string;
-  pj_name: string;
-  cow_count: number;
+  location: string | null;
+  capacity: number;
+  caretaker_name: string | null;
   created_at: string;
 }
 
@@ -143,15 +147,14 @@ export interface MilkOffer {
   confirmed_at: string | null;
 }
 
-/** Cow health log — backend/app/schemas/health_log.py */
+/** Cow health event log — backend/app/schemas/health_log.py → HealthLogResponse */
 export interface HealthLog {
   id: number;
   cow_id: number;
-  cow_code: string;
-  description: string;
-  diagnosed_at: string;
-  resolved_at: string | null;
-  handled: boolean;
+  event_type: string;          // SICK, RECOVERED, TREATMENT, DEAD, CHECKUP
+  description: string | null;
+  reported_by: string | null;
+  created_at: string;
 }
 
 /** Feed stock — backend/app/schemas/feed.py → FeedStockResponse */
@@ -188,25 +191,59 @@ export interface FeedStockMovement {
   created_at: string;
 }
 
-/** Waste/fertilizer batch — backend/app/schemas/waste.py */
+/** Waste/fertilizer batch — backend/app/schemas/waste.py → WasteBatchResponse */
 export interface WasteBatch {
   id: number;
   barn_id: number;
-  barn_name: string;
-  quantity_kg: number;
+  batch_code: string;
+  raw_waste_kg: number;
+  estimated_fertilizer_kg: number;
   status: string;
+  fermentation_start: string | null;
+  fermentation_end: string | null;
   created_at: string;
-  ready_at: string | null;
 }
 
-/** Daily market price — backend/app/schemas/market_price.py */
+/** Waste summary — backend/app/schemas/waste.py → WasteSummaryResponse */
+export interface WasteSummary {
+  total_raw_waste_kg: number;
+  total_fertilizer_ready_kg: number;
+  batches_fermenting: number;
+  batches_ready: number;
+}
+
+/** Fertilizer offer — backend/app/schemas/waste.py → FertilizerOfferResponse */
+export interface FertilizerOffer {
+  id: number;
+  quantity_kg: number;
+  price_per_kg: number;
+  total_price: number;
+  status: string;
+  accepted_by: string | null;
+  notes: string | null;
+  expires_at: string | null;
+  created_at: string;
+  confirmed_at: string | null;
+}
+
+/** Daily market price — backend/app/schemas/market_price.py → MarketPriceResponse */
 export interface MarketPrice {
   id: number;
   date: string;
   item_type: string;
-  price: number;
+  price_per_unit: number;
+  unit: string;
   source: string;
   created_at: string;
+}
+
+/** Today's prices summary for dashboard modal — TodayPricesSummary */
+export interface TodayPricesSummary {
+  date: string;
+  pakan: MarketPrice | null;
+  susu: MarketPrice | null;
+  pupuk: MarketPrice | null;
+  is_auto_generated: boolean;
 }
 
 /** Attendance log — backend/app/schemas/attendance.py → AttendanceLogResponse */
@@ -374,10 +411,49 @@ export interface MilkOfferCreateInput {
   min_order_liters?: number;
 }
 
-/** POST /prices */
+/** POST /prices — backend/app/schemas/market_price.py → MarketPriceCreate */
 export interface MarketPriceInput {
-  item_type: MarketPriceItemType;
-  price: number;
+  date: string;
+  item_type: string;
+  price_per_unit: number;
+  unit?: string;
+  source?: string;
+}
+
+/** POST /waste/batches — backend/app/schemas/waste.py → WasteBatchCreate */
+export interface WasteBatchCreateInput {
+  barn_id: number;
+  raw_waste_kg: number;
+}
+
+/** POST /fertilizer/offers — backend/app/schemas/waste.py → FertilizerOfferCreate */
+export interface FertilizerOfferCreateInput {
+  quantity_kg: number;
+  price_per_kg: number;
+}
+
+/** POST /health-logs — backend/app/schemas/health_log.py → HealthLogCreate */
+export interface HealthLogCreateInput {
+  cow_id: number;
+  event_type: string;
+  description?: string | null;
+  reported_by?: string | null;
+}
+
+/** POST /barns — backend/app/schemas/barn.py → BarnCreate */
+export interface BarnCreateInput {
+  name: string;
+  location?: string | null;
+  capacity?: number;
+  caretaker_name?: string | null;
+}
+
+/** PUT /barns/:id — backend/app/schemas/barn.py → BarnUpdate */
+export interface BarnUpdateInput {
+  name?: string | null;
+  location?: string | null;
+  capacity?: number | null;
+  caretaker_name?: string | null;
 }
 
 /** POST /notifications/read */
