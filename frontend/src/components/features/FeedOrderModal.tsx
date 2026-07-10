@@ -85,10 +85,8 @@ export function FeedOrderModal() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Beli Pakan
-        </Button>
+      <DialogTrigger render={<Button />}>
+        <Plus className="mr-2 h-4 w-4" /> Beli Pakan
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
