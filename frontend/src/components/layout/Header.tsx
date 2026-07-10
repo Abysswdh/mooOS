@@ -1,7 +1,6 @@
 'use client';
 
 import { Bell, UserCircle } from 'lucide-react';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,51 +11,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useNotifications } from '@/hooks/useNotifications';
-import { useEffect, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-
-// Title mapping for routes
-const ROUTE_TITLES: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/dashboard/ternak': 'Manajemen Ternak',
-  '/dashboard/pakan': 'Manajemen Pakan',
-  '/dashboard/hasil': 'Hasil Produksi Susu',
-  '/dashboard/limbah': 'Pengolahan Limbah',
-  '/dashboard/laporan': 'Laporan & Statistik',
-  '/dashboard/anggota': 'Data Anggota',
-  '/dashboard/pengaturan': 'Pengaturan Sistem',
-};
+import { RealtimeClock } from '@/components/features/RealtimeClock';
 
 export function Header() {
-  const pathname = usePathname();
   const router = useRouter();
   const { notifications, unreadCount, markAsRead } = useNotifications();
-  
-  // Prevent hydration errors by using state for title
-  const [title, setTitle] = useState('Dashboard');
-  
-  useEffect(() => {
-    // Exact match
-    if (ROUTE_TITLES[pathname]) {
-      setTitle(ROUTE_TITLES[pathname]);
-      return;
-    }
-    
-    // Partial match for nested routes (e.g., /dashboard/ternak/1)
-    const baseRoute = Object.keys(ROUTE_TITLES)
-      .sort((a, b) => b.length - a.length)
-      .find((route) => route !== '/dashboard' && pathname.startsWith(route));
-      
-    if (baseRoute) {
-      setTitle(ROUTE_TITLES[baseRoute]);
-    } else {
-      setTitle('MooOS');
-    }
-  }, [pathname]);
 
   const handleLogout = () => {
     // TODO: Clear token / call auth hook logout
@@ -64,13 +28,10 @@ export function Header() {
   };
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background">
-      <div className="flex flex-1 items-center gap-4">
-        <SidebarTrigger className="-ml-1" />
-        <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
-      </div>
+    <header className="flex h-16 shrink-0 items-center justify-end border-b px-4 bg-background">
 
       <div className="flex items-center gap-4">
+        <RealtimeClock />
         {/* Notification Bell */}
         <DropdownMenu>
           <DropdownMenuTrigger className="relative inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9">

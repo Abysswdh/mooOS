@@ -1,13 +1,16 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Clock, LogIn, LogOut } from 'lucide-react';
+import { LogIn, LogOut, Clock } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useAttendance } from '@/hooks/useDashboard';
+import { useSettings } from '@/hooks/useSettings';
 import { toastSuccess, toastError } from '@/lib/notify';
 
 export function AbsensiCard() {
   const { attendance, isClockedIn, isLoading, clockIn, clockOut, isSubmitting } = useAttendance();
+  const { settings } = useSettings();
 
   const handleClockIn = async () => {
     try {
@@ -32,56 +35,53 @@ export function AbsensiCard() {
     : null;
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader>
-        <CardTitle className="text-lg font-medium flex items-center gap-2">
-          <Clock className="w-5 h-5 text-muted-foreground" />
-          Kehadiran Hari Ini
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col justify-center items-center gap-4 py-6">
-        <div className="text-center space-y-2">
-          {isLoading ? (
-            <>
-              <p className="text-sm text-muted-foreground">Memuat status kehadiran...</p>
-              <p className="text-3xl font-bold text-muted-foreground">-- : --</p>
-            </>
-          ) : isClockedIn ? (
-            <>
-              <p className="text-sm text-muted-foreground">Anda sudah absen masuk pada</p>
-              <p className="text-3xl font-bold text-emerald-600">{clockInTime}</p>
-            </>
-          ) : (
-            <>
-              <p className="text-sm text-muted-foreground">Silakan absen untuk memulai shift</p>
-              <p className="text-3xl font-bold text-muted-foreground">-- : --</p>
-            </>
-          )}
-        </div>
+    <div className="bg-slate-200/50 rounded-xl p-6 flex flex-col items-center h-full text-center">
+      <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm border border-slate-200 overflow-hidden relative">
+        <Image 
+          src="/vincelli.png" 
+          alt="Profile Picture" 
+          fill
+          className="object-cover"
+        />
+      </div>
+      <h2 className="text-xl font-bold text-slate-800">Halo, Admin!</h2>
+      <p className="text-sm text-slate-500 mt-1 mb-8">PIC {settings?.koperasi_name || 'Koperasi'}</p>
 
-        <div className="w-full mt-4">
-          {isClockedIn ? (
-            <Button
-              variant="destructive"
-              className="w-full"
-              onClick={handleClockOut}
-              disabled={isSubmitting || isLoading}
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Absen Pulang
-            </Button>
-          ) : (
-            <Button
-              className="w-full bg-emerald-600 hover:bg-emerald-700"
-              onClick={handleClockIn}
-              disabled={isSubmitting || isLoading}
-            >
-              <LogIn className="w-4 h-4 mr-2" />
-              Absen Masuk
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      <div className="w-full text-center space-y-2 mb-6">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Memuat status kehadiran...</p>
+        ) : isClockedIn ? (
+          <div className="bg-emerald-100 text-emerald-800 text-xs px-3 py-1.5 rounded-full font-medium animate-pulse inline-block">
+            Sedang Bekerja (Masuk: {clockInTime})
+          </div>
+        ) : (
+          <div className="bg-slate-100 text-slate-600 text-xs px-3 py-1.5 rounded-full font-medium inline-block">
+            Silakan absen untuk memulai shift
+          </div>
+        )}
+      </div>
+
+      <div className="w-full space-y-3 flex-1">
+        <Button
+          variant={isClockedIn ? 'outline' : 'default'}
+          className={cn("w-full justify-start h-12 px-6", isClockedIn ? 'opacity-50 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white')}
+          onClick={handleClockIn}
+          disabled={isSubmitting || isLoading || isClockedIn}
+        >
+          <LogIn className="w-5 h-5 mr-3" />
+          Absen Masuk
+        </Button>
+
+        <Button
+          variant={!isClockedIn ? 'outline' : 'default'}
+          className={cn("w-full justify-start h-12 px-6", !isClockedIn ? 'opacity-50 cursor-not-allowed' : 'bg-rose-600 hover:bg-rose-700 text-white')}
+          onClick={handleClockOut}
+          disabled={isSubmitting || isLoading || !isClockedIn}
+        >
+          <LogOut className="w-5 h-5 mr-3" />
+          Absen Pulang
+        </Button>
+      </div>
+    </div>
   );
 }

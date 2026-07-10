@@ -7,15 +7,45 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { MilkCreateModal } from '@/components/features/MilkCreateModal';
 import { MilkOfferModal } from '@/components/features/MilkOfferModal';
 import { KPICard } from '@/components/ui/KPICard';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DataTable, ColumnDef, SortOption } from '@/components/ui/DataTable';
 import { formatNumber } from '@/lib/formatters';
 import { Milk, Beef } from 'lucide-react';
+import type { MilkRecord } from '@/types';
 
 export default function HasilSusuPage() {
   const { summary, records, isLoading, error, refetch } = useMilk();
 
   if (isLoading) return <LoadingSpinner />;
   if (error) return <ErrorState message={error} onRetry={refetch} />;
+
+  const columns: ColumnDef<MilkRecord>[] = [
+    { 
+      header: 'Tanggal', 
+      cell: (r) => new Date(r.date).toLocaleDateString('id-ID'),
+    },
+    { 
+      header: 'ID Sapi', 
+      cell: (r) => `Sapi #${r.cow_id}`,
+      className: 'font-medium text-indigo-700' 
+    },
+    { 
+      header: 'Liters', 
+      cell: (r) => formatNumber(r.liters),
+      align: 'right'
+    },
+    { 
+      header: 'Dicatat Oleh', 
+      cell: (r) => r.recorded_by || '-',
+      className: 'text-slate-500'
+    },
+  ];
+
+  const sortOptions: SortOption<MilkRecord>[] = [
+    { label: 'Terbaru', value: 'newest', sortFn: (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() },
+    { label: 'Terlama', value: 'oldest', sortFn: (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() },
+    { label: 'Liter (Terbanyak)', value: 'liter-desc', sortFn: (a, b) => b.liters - a.liters },
+    { label: 'Liter (Sedikit)', value: 'liter-asc', sortFn: (a, b) => a.liters - b.liters },
+  ];
 
   return (
     <div className="space-y-6">
@@ -44,32 +74,15 @@ export default function HasilSusuPage() {
           <CardTitle>Riwayat Produksi</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tanggal</TableHead>
-                <TableHead>ID Sapi</TableHead>
-                <TableHead>Liters</TableHead>
-                <TableHead>Dicatat Oleh</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {records.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">Belum ada riwayat produksi susu</TableCell>
-                </TableRow>
-              ) : (
-                records.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell>{new Date(r.date).toLocaleDateString('id-ID')}</TableCell>
-                    <TableCell className="font-medium">Sapi #{r.cow_id}</TableCell>
-                    <TableCell>{formatNumber(r.liters)}</TableCell>
-                    <TableCell>{r.recorded_by || '-'}</TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <DataTable
+            data={records}
+            columns={columns}
+            searchPlaceholder="Cari pencatat..."
+            searchKeys={['recorded_by']}
+            sortOptions={sortOptions}
+            defaultSortValue="newest"
+            emptyTitle="Belum ada riwayat produksi susu"
+          />
         </CardContent>
       </Card>
     </div>

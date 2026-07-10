@@ -10,14 +10,14 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <Sidebar />
-      <SidebarInset className="flex flex-col flex-1 h-screen overflow-hidden bg-muted/20">
+      <div className="flex flex-col flex-1 h-screen overflow-hidden bg-slate-50 w-full">
         <Header />
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           <div className="mx-auto max-w-7xl w-full">
             {children}
           </div>
         </main>
-      </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }

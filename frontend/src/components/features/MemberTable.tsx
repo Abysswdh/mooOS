@@ -1,59 +1,89 @@
 'use client';
 
+import { useState } from 'react';
 import { useMembers } from '@/hooks/useMembers';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { ErrorState } from '@/components/ui/ErrorState';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { Badge } from '@/components/ui/badge';
 import { formatRp } from '@/lib/formatters';
+import { DataTable, ColumnDef, SortOption } from '@/components/ui/DataTable';
+import { MemberDetailModal } from './MemberDetailModal';
+import type { Member } from '@/types';
 
 export function MemberTable() {
-  const { members, total, isLoading, error, refetch } = useMembers();
+  const { members, isLoading, error, refetch } = useMembers();
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  if (isLoading) return <LoadingSpinner />;
-  if (error) return <ErrorState message={error} onRetry={refetch} />;
-  if (members.length === 0) return <EmptyState title="Belum ada data anggota koperasi" />;
+  const columns: ColumnDef<Member>[] = [
+    { 
+      header: 'Nama', 
+      accessorKey: 'name', 
+      className: 'font-medium text-indigo-700' 
+    },
+    { 
+      header: 'NIK', 
+      accessorKey: 'nik',
+      className: 'text-slate-500' 
+    },
+    { 
+      header: 'No. HP', 
+      cell: (member) => member.phone || '-',
+      className: 'text-slate-600'
+    },
+    { 
+      header: 'Simpanan Pokok', 
+      cell: (member) => formatRp(member.simpanan_pokok),
+      align: 'right',
+      className: 'font-medium text-slate-700'
+    },
+    { 
+      header: 'Simpanan Wajib', 
+      cell: (member) => formatRp(member.simpanan_wajib),
+      align: 'right',
+      className: 'font-medium text-slate-700'
+    },
+    { 
+      header: 'Status', 
+      cell: (member) => member.is_active ? (
+        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-200">Aktif</Badge>
+      ) : (
+        <Badge variant="outline" className="bg-slate-500/10 text-slate-600 border-slate-200">Non-Aktif</Badge>
+      ),
+      align: 'center'
+    },
+  ];
+
+  const sortOptions: SortOption<Member>[] = [
+    { label: 'Nama (A-Z)', value: 'name-asc', sortFn: (a, b) => a.name.localeCompare(b.name) },
+    { label: 'Nama (Z-A)', value: 'name-desc', sortFn: (a, b) => b.name.localeCompare(a.name) },
+    { label: 'Total Simpanan (Tertinggi)', value: 'simpanan-desc', sortFn: (a, b) => (b.simpanan_pokok + b.simpanan_wajib) - (a.simpanan_pokok + a.simpanan_wajib) },
+    { label: 'Total Simpanan (Terendah)', value: 'simpanan-asc', sortFn: (a, b) => (a.simpanan_pokok + a.simpanan_wajib) - (b.simpanan_pokok + b.simpanan_wajib) },
+  ];
 
   return (
-    <div className="rounded-md border bg-card">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nama</TableHead>
-            <TableHead>NIK</TableHead>
-            <TableHead>No. HP</TableHead>
-            <TableHead>Simpanan Pokok</TableHead>
-            <TableHead>Simpanan Wajib</TableHead>
-            <TableHead className="text-center">Status</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {members.map((member) => (
-            <TableRow key={member.id}>
-              <TableCell className="font-medium">{member.name}</TableCell>
-              <TableCell>{member.nik}</TableCell>
-              <TableCell>
-                <div>{member.phone || '-'}</div>
-              </TableCell>
-              <TableCell>{formatRp(member.simpanan_pokok)}</TableCell>
-              <TableCell>{formatRp(member.simpanan_wajib)}</TableCell>
-              <TableCell className="text-center font-bold">
-                {member.is_active ? 'Aktif' : 'Non-Aktif'}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <div className="p-4 border-t text-sm text-muted-foreground">
-        Menampilkan {members.length} dari {total} total anggota.
-      </div>
-    </div>
+    <>
+      <DataTable
+        data={members}
+        columns={columns}
+        searchPlaceholder="Cari nama atau NIK..."
+        searchKeys={['name', 'nik']}
+        sortOptions={sortOptions}
+        defaultSortValue="name-asc"
+        onRowClick={(member) => {
+          setSelectedMember(member);
+          setIsDetailOpen(true);
+        }}
+        isLoading={isLoading}
+        error={error}
+        onRetry={refetch}
+        emptyTitle="Belum ada data anggota koperasi"
+      />
+      
+      <MemberDetailModal 
+        member={selectedMember} 
+        isOpen={isDetailOpen} 
+        onClose={() => setIsDetailOpen(false)} 
+        onUpdated={refetch}
+      />
+    </>
   );
 }

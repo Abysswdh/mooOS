@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Beef } from 'lucide-react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,14 +41,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-md shadow-xl border-t-4 border-t-primary">
-        <CardHeader className="space-y-2 text-center pb-8">
-          <div className="flex justify-center mb-4">
-            <div className="bg-primary/10 p-3 rounded-full">
-              <Beef className="w-10 h-10 text-primary" />
-            </div>
+        <CardHeader className="space-y-4 text-center pb-8">
+          <div className="flex justify-center mb-2">
+            <Image src="/mooos-logo.png" alt="MooOS Logo" width={280} height={80} className="h-16 w-auto object-contain" priority />
           </div>
-          <CardTitle className="text-3xl font-bold">MooOS</CardTitle>
-          <CardDescription>
+          <CardDescription className="text-base">
             Sistem Informasi Koperasi Ternak Sapi Perah
           </CardDescription>
         </CardHeader>

@@ -7,16 +7,54 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { WasteCreateModal } from '@/components/features/WasteCreateModal';
 import { FertilizerOfferModal } from '@/components/features/FertilizerOfferModal';
 import { KPICard } from '@/components/ui/KPICard';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DataTable, ColumnDef, SortOption } from '@/components/ui/DataTable';
 import { formatNumber } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
 import { Recycle } from 'lucide-react';
+import type { WasteBatch } from '@/types';
 
 export default function LimbahPage() {
   const { summary, batches, isLoading, error, refetch } = useWaste();
 
   if (isLoading) return <LoadingSpinner />;
   if (error) return <ErrorState message={error} onRetry={refetch} />;
+
+  const columns: ColumnDef<WasteBatch>[] = [
+    { 
+      header: 'Kode Batch', 
+      accessorKey: 'batch_code', 
+      className: 'font-medium text-emerald-700' 
+    },
+    { 
+      header: 'Kandang ID', 
+      cell: (b) => `#${b.barn_id}`,
+      className: 'text-slate-500' 
+    },
+    { 
+      header: 'Limbah Mentah (kg)', 
+      cell: (b) => formatNumber(b.raw_waste_kg),
+      align: 'right'
+    },
+    { 
+      header: 'Estimasi Pupuk (kg)', 
+      cell: (b) => formatNumber(b.estimated_fertilizer_kg),
+      align: 'right'
+    },
+    { 
+      header: 'Status', 
+      cell: (b) => (
+        <Badge variant={b.status === 'READY' ? 'default' : 'outline'}>{b.status}</Badge>
+      ),
+      align: 'center'
+    },
+  ];
+
+  const sortOptions: SortOption<WasteBatch>[] = [
+    { label: 'Terbaru', value: 'newest', sortFn: (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime() },
+    { label: 'Terlama', value: 'oldest', sortFn: (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime() },
+    { label: 'Limbah (Terbanyak)', value: 'waste-desc', sortFn: (a, b) => b.raw_waste_kg - a.raw_waste_kg },
+    { label: 'Limbah (Sedikit)', value: 'waste-asc', sortFn: (a, b) => a.raw_waste_kg - b.raw_waste_kg },
+  ];
 
   return (
     <div className="space-y-6">
@@ -45,36 +83,15 @@ export default function LimbahPage() {
           <CardTitle>Daftar Batch Pupuk</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Kode Batch</TableHead>
-                <TableHead>Kandang ID</TableHead>
-                <TableHead>Limbah Mentah</TableHead>
-                <TableHead>Estimasi Pupuk</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {batches.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Belum ada data batch limbah</TableCell>
-                </TableRow>
-              ) : (
-                batches.map((b) => (
-                  <TableRow key={b.id}>
-                    <TableCell className="font-medium">{b.batch_code}</TableCell>
-                    <TableCell>#{b.barn_id}</TableCell>
-                    <TableCell>{formatNumber(b.raw_waste_kg)} kg</TableCell>
-                    <TableCell>{formatNumber(b.estimated_fertilizer_kg)} kg</TableCell>
-                    <TableCell>
-                      <Badge variant={b.status === 'READY' ? 'default' : 'outline'}>{b.status}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <DataTable
+            data={batches}
+            columns={columns}
+            searchPlaceholder="Cari kode batch..."
+            searchKeys={['batch_code']}
+            sortOptions={sortOptions}
+            defaultSortValue="newest"
+            emptyTitle="Belum ada data batch limbah"
+          />
         </CardContent>
       </Card>
     </div>

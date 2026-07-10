@@ -1,23 +1,11 @@
 'use client';
 
-import { useCows } from '@/hooks/useCows';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { ErrorState } from '@/components/ui/ErrorState';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { formatNumber } from '@/lib/formatters';
-import { Button } from '@/components/ui/button';
-import { QrCode } from 'lucide-react';
-import { CowDetailModal } from './CowDetailModal';
 import { useState } from 'react';
+import { useCows } from '@/hooks/useCows';
+import { Badge } from '@/components/ui/badge';
+import { formatNumber } from '@/lib/formatters';
+import { DataTable, ColumnDef, SortOption } from '@/components/ui/DataTable';
+import { CowDetailModal } from './CowDetailModal';
 import type { Cow } from '@/types';
 
 function StatusBadge({ status }: { status: string }) {
@@ -34,61 +22,68 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function CowTable() {
-  const { cows, total, isLoading, error, refetch } = useCows();
+  const { cows, isLoading, error, refetch } = useCows();
   const [selectedCow, setSelectedCow] = useState<Cow | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  if (isLoading) return <LoadingSpinner />;
-  if (error) return <ErrorState message={error} onRetry={refetch} />;
-  if (cows.length === 0) return <EmptyState title="Belum ada data sapi" />;
+  const columns: ColumnDef<Cow>[] = [
+    { 
+      header: 'Kode', 
+      accessorKey: 'code', 
+      className: 'font-medium text-emerald-700' 
+    },
+    { 
+      header: 'Nama', 
+      cell: (cow) => cow.name || '-',
+      className: 'font-medium' 
+    },
+    { 
+      header: 'ID Pemilik', 
+      cell: (cow) => cow.owner_id ? `#${cow.owner_id}` : '-',
+      className: 'text-slate-500' 
+    },
+    { 
+      header: 'Status', 
+      cell: (cow) => <StatusBadge status={cow.status} /> 
+    },
+    { 
+      header: 'Tipe & Gender', 
+      cell: (cow) => `${cow.cow_type === 'DAIRY' ? 'Perah' : 'Potong'} • ${cow.gender === 'FEMALE' ? 'Betina' : 'Jantan'}`,
+      className: 'text-slate-600'
+    },
+    { 
+      header: 'Berat (Kg)', 
+      cell: (cow) => formatNumber(cow.weight_kg),
+      align: 'right',
+      className: 'font-medium text-slate-700'
+    },
+  ];
+
+  const sortOptions: SortOption<Cow>[] = [
+    { label: 'Kode (A-Z)', value: 'code-asc', sortFn: (a, b) => a.code.localeCompare(b.code) },
+    { label: 'Kode (Z-A)', value: 'code-desc', sortFn: (a, b) => b.code.localeCompare(a.code) },
+    { label: 'Berat (Terbesar)', value: 'weight-desc', sortFn: (a, b) => b.weight_kg - a.weight_kg },
+    { label: 'Berat (Terkecil)', value: 'weight-asc', sortFn: (a, b) => a.weight_kg - b.weight_kg },
+  ];
 
   return (
-    <div className="rounded-md border bg-card">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Kode</TableHead>
-            <TableHead>Nama</TableHead>
-            <TableHead>ID Pemilik</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Tipe & Gender</TableHead>
-            <TableHead className="text-right">Berat (Kg)</TableHead>
-            <TableHead className="text-center">Aksi</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {cows.map((cow) => (
-            <TableRow key={cow.id}>
-              <TableCell className="font-medium">{cow.code}</TableCell>
-              <TableCell>{cow.name || '-'}</TableCell>
-              <TableCell>{cow.owner_id ? `#${cow.owner_id}` : '-'}</TableCell>
-              <TableCell>
-                <StatusBadge status={cow.status} />
-              </TableCell>
-              <TableCell>
-                {cow.cow_type === 'DAIRY' ? 'Perah' : 'Potong'} • {cow.gender === 'FEMALE' ? 'Betina' : 'Jantan'}
-              </TableCell>
-              <TableCell className="text-right">{formatNumber(cow.weight_kg)}</TableCell>
-              <TableCell className="text-center">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => {
-                    setSelectedCow(cow);
-                    setIsDetailOpen(true);
-                  }}
-                  title="Detail & QR Code"
-                >
-                  <QrCode className="w-4 h-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <div className="p-4 border-t text-sm text-muted-foreground">
-        Menampilkan {cows.length} dari {total} total sapi.
-      </div>
+    <>
+      <DataTable
+        data={cows}
+        columns={columns}
+        searchPlaceholder="Cari kode atau nama sapi..."
+        searchKeys={['code', 'name']}
+        sortOptions={sortOptions}
+        defaultSortValue="code-asc"
+        onRowClick={(cow) => {
+          setSelectedCow(cow);
+          setIsDetailOpen(true);
+        }}
+        isLoading={isLoading}
+        error={error}
+        onRetry={refetch}
+        emptyTitle="Belum ada data sapi"
+      />
       
       <CowDetailModal 
         cow={selectedCow} 
@@ -96,6 +91,6 @@ export function CowTable() {
         onClose={() => setIsDetailOpen(false)} 
         onUpdated={refetch}
       />
-    </div>
+    </>
   );
 }

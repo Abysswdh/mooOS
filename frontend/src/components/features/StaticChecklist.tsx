@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+
 import { Circle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -30,48 +30,65 @@ export function StaticChecklist() {
   const completedCount = completedTaskIds.length;
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-3 border-b">
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle className="text-lg">Tugas Rutin Kandang</CardTitle>
-            <CardDescription>Selesai: {completedCount} / {STATIC_TASKS.length}</CardDescription>
-          </div>
-          <div className="bg-blue-500/10 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
-            {pendingTasks.length} tugas
-          </div>
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 h-full flex flex-col">
+      <div className="flex justify-between items-end mb-6">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            Tugas Rutinitas Kandang
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">Selesai: {completedCount} / {STATIC_TASKS.length}</p>
         </div>
-      </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto p-0">
+        <div className="text-sm font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+          {pendingTasks.length} tersisa
+        </div>
+      </div>
+      
+      {/* Progress bar */}
+      <div className="w-full bg-slate-100 h-2 rounded-full mb-8 overflow-hidden">
+        <div 
+          className="bg-blue-500 h-full transition-all duration-500 ease-in-out" 
+          style={{ width: `${Math.round((completedCount / STATIC_TASKS.length) * 100)}%` }}
+        />
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-0">
         {pendingTasks.length === 0 ? (
           <EmptyState
             title="Semua tugas rutin selesai!"
             description="Kandang sudah beres untuk hari ini."
           />
         ) : (
-          <div className="divide-y">
-            {pendingTasks.map((task) => (
-              <div key={task.id} className="p-4 flex gap-4 hover:bg-muted/50 transition-colors">
-                <button
-                  className="mt-1 flex-shrink-0 text-muted-foreground hover:text-blue-600 transition-colors"
-                  onClick={() => toggleTask(task.id)}
-                >
-                  <Circle className="w-6 h-6" />
-                </button>
-                <div className="flex-1 space-y-1">
+          <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+            {pendingTasks.map((task, index) => (
+              <div key={task.id} className="relative flex items-start gap-4 hover:bg-slate-50 p-2 rounded-xl transition-colors">
+                {/* Timeline line */}
+                {index < pendingTasks.length - 1 && (
+                  <div className="absolute left-[38px] top-12 bottom-[-24px] w-0.5 bg-slate-100" />
+                )}
+                
+                <div className="pt-1 z-10">
+                  <button
+                    className="w-14 h-14 rounded-full border-2 border-slate-300 text-slate-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 flex items-center justify-center bg-white transition-all"
+                    onClick={() => toggleTask(task.id)}
+                  >
+                    <Circle className="w-8 h-8" />
+                  </button>
+                </div>
+                
+                <div className="flex-1 pt-1">
                   <div className="flex items-start justify-between gap-2">
-                    <h4 className="font-medium text-sm leading-tight">{task.title}</h4>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-600 border border-blue-500/20">
+                    <h4 className="font-semibold text-lg text-slate-800 leading-tight">{task.title}</h4>
+                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-50 text-blue-600 border border-blue-100">
                       RUTIN
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground">{task.description}</p>
+                  <p className="text-sm text-slate-500 mt-1">{task.description}</p>
                 </div>
               </div>
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

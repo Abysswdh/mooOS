@@ -6,16 +6,53 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { FeedOrderModal } from '@/components/features/FeedOrderModal';
 import { KPICard } from '@/components/ui/KPICard';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DataTable, ColumnDef, SortOption } from '@/components/ui/DataTable';
 import { formatNumber, formatRp } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
 import { Wheat } from 'lucide-react';
+import type { FeedOrder } from '@/types';
 
 export default function PakanPage() {
   const { stock, orders, isLoading, error, refetch } = useFeed();
 
   if (isLoading) return <LoadingSpinner />;
   if (error) return <ErrorState message={error} onRetry={refetch} />;
+
+  const columns: ColumnDef<FeedOrder>[] = [
+    { 
+      header: 'No. PO', 
+      accessorKey: 'po_number', 
+      className: 'font-medium text-emerald-700' 
+    },
+    { 
+      header: 'Tipe Pakan', 
+      accessorKey: 'feed_type'
+    },
+    { 
+      header: 'Jumlah (Kg)', 
+      cell: (order) => formatNumber(order.quantity_kg),
+      align: 'right'
+    },
+    { 
+      header: 'Max Harga/Kg', 
+      cell: (order) => formatRp(order.max_price_per_kg),
+      align: 'right'
+    },
+    { 
+      header: 'Status', 
+      cell: (order) => (
+        <Badge variant={order.status === 'ACCEPTED' ? 'default' : 'outline'}>{order.status}</Badge>
+      ),
+      align: 'center'
+    },
+  ];
+
+  const sortOptions: SortOption<FeedOrder>[] = [
+    { label: 'Terbaru', value: 'newest', sortFn: (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime() },
+    { label: 'Terlama', value: 'oldest', sortFn: (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime() },
+    { label: 'Jumlah (Terbanyak)', value: 'qty-desc', sortFn: (a, b) => b.quantity_kg - a.quantity_kg },
+    { label: 'Jumlah (Sedikit)', value: 'qty-asc', sortFn: (a, b) => a.quantity_kg - b.quantity_kg },
+  ];
 
   return (
     <div className="space-y-6">
@@ -45,36 +82,15 @@ export default function PakanPage() {
           <CardTitle>Riwayat Pembelian (PO)</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>No. PO</TableHead>
-                <TableHead>Tipe Pakan</TableHead>
-                <TableHead>Jumlah (Kg)</TableHead>
-                <TableHead>Max Harga/Kg</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Belum ada riwayat PO</TableCell>
-                </TableRow>
-              ) : (
-                orders.map((po) => (
-                  <TableRow key={po.id}>
-                    <TableCell className="font-medium">{po.po_number}</TableCell>
-                    <TableCell>{po.feed_type}</TableCell>
-                    <TableCell>{formatNumber(po.quantity_kg)}</TableCell>
-                    <TableCell>{formatRp(po.max_price_per_kg)}</TableCell>
-                    <TableCell>
-                      <Badge variant={po.status === 'ACCEPTED' ? 'default' : 'outline'}>{po.status}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <DataTable
+            data={orders}
+            columns={columns}
+            searchPlaceholder="Cari nomor PO..."
+            searchKeys={['po_number', 'feed_type']}
+            sortOptions={sortOptions}
+            defaultSortValue="newest"
+            emptyTitle="Belum ada riwayat PO"
+          />
         </CardContent>
       </Card>
     </div>

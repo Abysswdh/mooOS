@@ -1,6 +1,7 @@
 'use client';
 
 import { useDashboard } from '@/hooks/useDashboard';
+import { useSettings } from '@/hooks/useSettings';
 import { KPICard } from '@/components/ui/KPICard';
 import { AbsensiCard } from '@/components/features/AbsensiCard';
 import { ChecklistPanel } from '@/components/features/ChecklistPanel';
@@ -10,11 +11,30 @@ import { Beef, Droplets, Wheat, TrendingUp } from 'lucide-react';
 
 export default function DashboardPage() {
   const { summary, isLoading, error } = useDashboard();
+  const { settings } = useSettings();
 
   return (
-    <div className="space-y-6">
-      {/* Top Row: KPIs */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-6 h-full flex flex-col">
+      {/* Main 3-Column Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-[500px]">
+        {/* Left Column: Profile & Attendance */}
+        <div className="lg:col-span-3 h-full">
+          <AbsensiCard />
+        </div>
+        
+        {/* Middle Column: Routine Tasks (Static) */}
+        <div className="lg:col-span-5 h-full">
+          <StaticChecklist />
+        </div>
+
+        {/* Right Column: System Alerts (Dynamic MRP) */}
+        <div className="lg:col-span-4 h-full">
+          <ChecklistPanel />
+        </div>
+      </div>
+
+      {/* Bottom Row: KPIs */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 shrink-0 pb-2">
         <KPICard
           title="Total Sapi Aktif"
           value={formatNumber(summary?.active_cows || 0)}
@@ -47,19 +67,6 @@ export default function DashboardPage() {
           isLoading={isLoading}
           error={error}
         />
-      </div>
-
-      {/* Middle Row: Main Features */}
-      <div className="grid gap-6 md:grid-cols-12 h-full">
-        <div className="md:col-span-4 h-[500px]">
-          <StaticChecklist />
-        </div>
-        <div className="md:col-span-4 h-[500px]">
-          <ChecklistPanel />
-        </div>
-        <div className="md:col-span-4 h-[500px]">
-          <AbsensiCard />
-        </div>
       </div>
     </div>
   );
