@@ -192,7 +192,86 @@ if bot:
         text = message.text.lower() if message.text else ""
         if text.startswith('pakan ') or text.startswith('susu ') or text.startswith('pupuk '):
             handle_price_submission(message)
+        elif text.startswith('tawar '):
+            handle_auction_bid(message)
             
+    def handle_auction_bid(message):
+        """Handle auction bids e.g. tawar PO-FEED-XXX 3500"""
+        parts = message.text.upper().split()
+        if len(parts) < 3:
+            bot.reply_to(message, "❌ Format salah. Gunakan: `tawar <KODE> <HARGA>`\nContoh: `tawar PO-FEED-123 3500`", parse_mode="Markdown")
+            return
+            
+        item_code = parts[1]
+        try:
+            price_val = float(parts[2].replace(",", ""))
+        except ValueError:
+            bot.reply_to(message, "❌ Format harga tidak valid.", parse_mode="Markdown")
+            return
+            
+        from app.models.auction import AuctionItemType, AuctionBid
+        from app.models.feed import FeedOrder, FeedOrderStatus
+        from app.models.milk_offer import MilkOffer, MilkOfferStatus
+        from app.models.waste import FertilizerOffer, FertilizerOfferStatus
+        
+        db = SessionLocal()
+        try:
+            item_type = None
+            item_id = None
+            
+            if item_code.startswith("PO-FEED-"):
+                order = db.query(FeedOrder).filter(FeedOrder.po_number == item_code, FeedOrder.status == FeedOrderStatus.OPEN).first()
+                if not order:
+                    bot.reply_to(message, "❌ Lelang Pakan tidak ditemukan atau sudah ditutup.")
+                    return
+                item_type = AuctionItemType.PAKAN
+                item_id = order.id
+            elif item_code.startswith("OF-MILK-"):
+                try:
+                    offer_id = int(item_code.split("-")[-1])
+                    offer = db.query(MilkOffer).filter(MilkOffer.id == offer_id, MilkOffer.status == MilkOfferStatus.OPEN).first()
+                    if not offer:
+                        bot.reply_to(message, "❌ Lelang Susu tidak ditemukan atau sudah ditutup.")
+                        return
+                    item_type = AuctionItemType.SUSU
+                    item_id = offer.id
+                except ValueError:
+                    bot.reply_to(message, "❌ Kode tidak valid.")
+                    return
+            elif item_code.startswith("OF-FERT-"):
+                try:
+                    offer_id = int(item_code.split("-")[-1])
+                    offer = db.query(FertilizerOffer).filter(FertilizerOffer.id == offer_id, FertilizerOffer.status == FertilizerOfferStatus.OPEN).first()
+                    if not offer:
+                        bot.reply_to(message, "❌ Lelang Pupuk tidak ditemukan atau sudah ditutup.")
+                        return
+                    item_type = AuctionItemType.PUPUK
+                    item_id = offer.id
+                except ValueError:
+                    bot.reply_to(message, "❌ Kode tidak valid.")
+                    return
+            else:
+                bot.reply_to(message, "❌ Kode lelang tidak dikenali.")
+                return
+                
+            bid = AuctionBid(
+                item_type=item_type,
+                item_id=item_id,
+                item_code=item_code,
+                telegram_user_id=str(message.from_user.id),
+                telegram_username=message.from_user.username,
+                price_per_unit=price_val
+            )
+            db.add(bid)
+            db.commit()
+            bot.reply_to(message, f"✅ Penawaran Rp{price_val:,.0f} untuk `{item_code}` berhasil dicatat!\nMohon tunggu hingga waktu lelang habis.", parse_mode="Markdown")
+            
+        except Exception as e:
+            print(f"Error handling bid: {e}")
+            bot.reply_to(message, "❌ Terjadi kesalahan pada sistem.")
+        finally:
+            db.close()
+
     def handle_price_submission(message):
         """Handle price submissions, validated against the correct group."""
         parts = message.text.lower().split()
@@ -310,7 +389,16 @@ if bot:
 
 def start_bot_thread():
     if bot:
-        thread = threading.Thread(target=bot.infinity_polling, daemon=True)
+        def _poll():
+            while True:
+                try:
+                    bot.infinity_polling(skip_pending=True, allowed_updates=["message", "callback_query"])
+                except Exception as e:
+                    import time
+                    print(f"Telegram Bot polling error: {e}. Restarting in 5s...")
+                    time.sleep(5)
+
+        thread = threading.Thread(target=_poll, daemon=True)
         thread.start()
         print("Telegram Bot Thread started")
     else:

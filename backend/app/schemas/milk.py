@@ -40,6 +40,7 @@ class MilkOfferCreate(BaseModel):
     quantity_liters: float
     price_per_liter: float
     min_order_liters: float = 50
+    duration_minutes: int | None = None
 
 
 class MilkOfferResponse(BaseModel):

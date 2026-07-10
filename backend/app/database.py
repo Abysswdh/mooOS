@@ -59,6 +59,7 @@ def create_all_tables() -> None:
     import app.models.health_log  # noqa: F401
     import app.models.milk_offer  # noqa: F401
     import app.models.settings  # noqa: F401
+    import app.models.auction  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
 

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -10,6 +10,8 @@ from app.models.user import User
 from app.schemas.feed import FeedStockResponse, FeedOrderResponse, FeedOrderCreate, FeedOrderListResponse
 from app.dependencies import get_current_user
 from app.config import get_settings
+from app.services.auction import schedule_auction_close
+from app.models.auction import AuctionItemType
 
 router = APIRouter(prefix="/feed", tags=["Feed"])
 
@@ -67,17 +69,39 @@ def create_feed_order(
     
     total_max_price = order_in.quantity_kg * order_in.max_price_per_kg
     
+    expires_at = None
+    if order_in.duration_minutes:
+        expires_at = datetime.now() + timedelta(minutes=order_in.duration_minutes)
+
     new_order = FeedOrder(
         po_number=po_number,
         quantity_kg=order_in.quantity_kg,
         feed_type=order_in.feed_type,
         max_price_per_kg=order_in.max_price_per_kg,
         total_max_price=total_max_price,
-        status=FeedOrderStatus.OPEN
+        status=FeedOrderStatus.OPEN,
+        expires_at=expires_at
     )
     db.add(new_order)
     db.commit()
     db.refresh(new_order)
     
-    # Normally we would trigger Telegram broadcast here.
+    if order_in.duration_minutes:
+        schedule_auction_close(AuctionItemType.PAKAN, new_order.id, order_in.duration_minutes)
+        from app.bot import bot
+        settings = get_settings()
+        if bot and settings.TELEGRAM_GROUP_PAKAN:
+            msg = (
+                f"📢 *Lelang Pembelian Pakan*\n\n"
+                f"MooOS butuh {order_in.quantity_kg} kg pakan {order_in.feed_type}.\n"
+                f"Batas maksimal harga: Rp{order_in.max_price_per_kg:,.0f}/kg.\n"
+                f"Waktu lelang: {order_in.duration_minutes} menit.\n\n"
+                f"Kirim penawaran Anda dengan format:\n"
+                f"`tawar {po_number} <harga_per_kg>`"
+            )
+            try:
+                bot.send_message(settings.TELEGRAM_GROUP_PAKAN, msg, parse_mode="Markdown")
+            except Exception as e:
+                print(f"Failed to announce auction to Telegram: {e}")
+
     return new_order

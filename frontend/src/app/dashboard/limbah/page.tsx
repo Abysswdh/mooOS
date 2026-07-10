@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { WasteCreateModal } from '@/components/features/WasteCreateModal';
+import { FertilizerOfferModal } from '@/components/features/FertilizerOfferModal';
 import { KPICard } from '@/components/ui/KPICard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatNumber } from '@/lib/formatters';
@@ -24,7 +25,10 @@ export default function LimbahPage() {
           <h2 className="text-2xl font-bold tracking-tight">Pengolahan Limbah & Pupuk</h2>
           <p className="text-muted-foreground">Pantau proses fermentasi pupuk kandang.</p>
         </div>
-        <WasteCreateModal />
+        <div className="flex gap-2">
+          <FertilizerOfferModal />
+          <WasteCreateModal />
+        </div>
       </div>
 
       {summary && (

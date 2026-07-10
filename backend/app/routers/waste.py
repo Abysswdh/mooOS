@@ -12,6 +12,8 @@ from app.schemas.waste import (
     FertilizerOfferCreate, FertilizerOfferResponse, FertilizerOfferListResponse
 )
 from app.dependencies import get_current_user
+from app.services.auction import schedule_auction_close
+from app.models.auction import AuctionItemType
 
 waste_router = APIRouter(prefix="/waste", tags=["Waste"])
 fertilizer_router = APIRouter(prefix="/fertilizer", tags=["Fertilizer"])
@@ -92,15 +94,41 @@ def create_fertilizer_offer(
     """Create a new fertilizer offer."""
     total_price = offer_in.quantity_kg * offer_in.price_per_kg
     
+    expires_at = None
+    if offer_in.duration_minutes:
+        expires_at = datetime.now() + timedelta(minutes=offer_in.duration_minutes)
+
     new_offer = FertilizerOffer(
         quantity_kg=offer_in.quantity_kg,
         price_per_kg=offer_in.price_per_kg,
         total_price=total_price,
-        status=FertilizerOfferStatus.OPEN
+        status=FertilizerOfferStatus.OPEN,
+        expires_at=expires_at
     )
     db.add(new_offer)
     db.commit()
     db.refresh(new_offer)
+
+    if offer_in.duration_minutes:
+        schedule_auction_close(AuctionItemType.PUPUK, new_offer.id, offer_in.duration_minutes)
+        from app.bot import bot
+        from app.config import get_settings
+        settings = get_settings()
+        if bot and settings.TELEGRAM_GROUP_PUPUK:
+            offer_code = f"OF-FERT-{new_offer.id}"
+            msg = (
+                f"📢 *Lelang Penjualan Pupuk*\n\n"
+                f"MooOS menjual {offer_in.quantity_kg} kg pupuk kompos.\n"
+                f"Harga dasar/min: Rp{offer_in.price_per_kg:,.0f}/kg.\n"
+                f"Waktu lelang: {offer_in.duration_minutes} menit.\n\n"
+                f"Kirim penawaran Anda dengan format:\n"
+                f"`tawar {offer_code} <harga_per_kg>`"
+            )
+            try:
+                bot.send_message(settings.TELEGRAM_GROUP_PUPUK, msg, parse_mode="Markdown")
+            except Exception as e:
+                print(f"Failed to announce auction to Telegram: {e}")
+
     return new_offer
 
 

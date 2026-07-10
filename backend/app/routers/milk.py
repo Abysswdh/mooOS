@@ -13,6 +13,8 @@ from app.schemas.milk import (
     MilkOfferCreate, MilkOfferResponse, MilkOfferListResponse
 )
 from app.dependencies import get_current_user
+from app.services.auction import schedule_auction_close
+from app.models.auction import AuctionItemType
 
 router = APIRouter(prefix="/milk", tags=["Milk"])
 
@@ -119,14 +121,41 @@ def create_milk_offer(
     """Create a new milk offer."""
     total_price = offer_in.quantity_liters * offer_in.price_per_liter
     
+    expires_at = None
+    if offer_in.duration_minutes:
+        expires_at = datetime.now() + timedelta(minutes=offer_in.duration_minutes)
+
     new_offer = MilkOffer(
         quantity_liters=offer_in.quantity_liters,
         price_per_liter=offer_in.price_per_liter,
         total_price=total_price,
         min_order_liters=offer_in.min_order_liters,
-        status=MilkOfferStatus.OPEN
+        status=MilkOfferStatus.OPEN,
+        expires_at=expires_at
     )
     db.add(new_offer)
     db.commit()
     db.refresh(new_offer)
+
+    if offer_in.duration_minutes:
+        schedule_auction_close(AuctionItemType.SUSU, new_offer.id, offer_in.duration_minutes)
+        from app.bot import bot
+        from app.config import get_settings
+        settings = get_settings()
+        if bot and settings.TELEGRAM_GROUP_SUSU:
+            offer_code = f"OF-MILK-{new_offer.id}"
+            msg = (
+                f"📢 *Lelang Penjualan Susu*\n\n"
+                f"MooOS menjual {offer_in.quantity_liters} liter susu segar.\n"
+                f"Harga dasar/min: Rp{offer_in.price_per_liter:,.0f}/liter.\n"
+                f"Min pembelian: {offer_in.min_order_liters} liter.\n"
+                f"Waktu lelang: {offer_in.duration_minutes} menit.\n\n"
+                f"Kirim penawaran Anda dengan format:\n"
+                f"`tawar {offer_code} <harga_per_liter>`"
+            )
+            try:
+                bot.send_message(settings.TELEGRAM_GROUP_SUSU, msg, parse_mode="Markdown")
+            except Exception as e:
+                print(f"Failed to announce auction to Telegram: {e}")
+
     return new_offer

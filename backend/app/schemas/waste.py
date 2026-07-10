@@ -39,6 +39,7 @@ class WasteSummaryResponse(BaseModel):
 class FertilizerOfferCreate(BaseModel):
     quantity_kg: float
     price_per_kg: float
+    duration_minutes: int | None = None
 
 
 class FertilizerOfferResponse(BaseModel):

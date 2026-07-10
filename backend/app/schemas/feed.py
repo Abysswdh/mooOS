@@ -9,6 +9,7 @@ class FeedOrderCreate(BaseModel):
     quantity_kg: float
     feed_type: str = "Konsentrat"
     max_price_per_kg: float
+    duration_minutes: int | None = None
 
 
 class FeedOrderResponse(BaseModel):
