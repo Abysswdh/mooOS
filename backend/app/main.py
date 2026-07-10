@@ -55,12 +55,14 @@ def create_app() -> FastAPI:
     app.include_router(waste.waste_router)
     app.include_router(waste.fertilizer_router)
     
-    from app.routers import prices, attendance, notifications, health, telegram
+    from app.routers import prices, attendance, notifications, health, telegram, reports, settings
     app.include_router(prices.router)
     app.include_router(attendance.router)
     app.include_router(notifications.router)
     app.include_router(health.router)
     app.include_router(telegram.router)
+    app.include_router(reports.router)
+    app.include_router(settings.router)
 
     return app
 

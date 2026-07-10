@@ -9,6 +9,7 @@ from app.models.member import Member
 from app.models.milk import MilkRecord
 from app.models.feed import FeedStock
 from app.models.waste import WasteBatch, WasteBatchStatus
+from app.models.market_price import DailyMarketPrice, MarketItemType
 from app.models.user import User
 from app.schemas.dashboard import DashboardSummary
 from app.dependencies import get_current_user
@@ -52,10 +53,18 @@ def get_dashboard_summary(
         WasteBatch.status == WasteBatchStatus.READY
     ).scalar() or 0.0)
     
-    # Revenue (Mock for now, can be implemented by querying Transaction/Payment tables later)
-    # Since we don't have a generic transaction table in the current context yet.
-    today_revenue = 0.0
-    month_revenue = 0.0
+    # Revenue — real calculation from today's milk × susu price
+    today_prices = db.query(DailyMarketPrice).filter(DailyMarketPrice.date == today).all()
+    price_map = {p.item_type: float(p.price_per_unit) for p in today_prices}
+    susu_price = price_map.get(MarketItemType.SUSU, 0.0)
+    pupuk_price = price_map.get(MarketItemType.PUPUK, 0.0)
+    
+    fertilizer_sold_kg = float(db.query(func.sum(WasteBatch.estimated_fertilizer_kg)).filter(
+        WasteBatch.status == WasteBatchStatus.SOLD
+    ).scalar() or 0.0)
+    
+    today_revenue = (today_milk * susu_price) + (fertilizer_sold_kg * pupuk_price)
+    month_revenue = 0.0  # can be aggregated per-month later
 
     return DashboardSummary(
         total_cows=total_cows,

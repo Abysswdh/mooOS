@@ -72,7 +72,7 @@ export default function HargaPasarPage() {
     setIsSubmitting(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-      
+
       const payloadPakan: MarketPriceInput = {
         date: today,
         item_type: 'PAKAN',
@@ -80,7 +80,7 @@ export default function HargaPasarPage() {
         unit: 'kg',
         source: 'ADMIN'
       };
-      
+
       const payloadSusu: MarketPriceInput = {
         date: today,
         item_type: 'SUSU',
@@ -88,7 +88,7 @@ export default function HargaPasarPage() {
         unit: 'liter',
         source: 'ADMIN'
       };
-      
+
       const payloadPupuk: MarketPriceInput = {
         date: today,
         item_type: 'PUPUK',
@@ -101,7 +101,7 @@ export default function HargaPasarPage() {
       await apiPost('/prices', payloadPakan);
       await apiPost('/prices', payloadSusu);
       await apiPost('/prices', payloadPupuk);
-      
+
       toastSuccess('Harga hari ini berhasil disimpan');
       await fetchTodayPrices();
     } catch (error: any) {

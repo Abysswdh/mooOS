@@ -29,6 +29,7 @@ from app.models.notification import Notification, NotificationType
 from app.models.attendance import AttendanceLog
 from app.models.telegram_contact import TelegramContact, TelegramContactRole
 from app.models.health_log import HealthLog, HealthEventType
+from app.models.settings import SystemSettings
 
 __all__ = [
     # User
@@ -80,4 +81,6 @@ __all__ = [
     # Health
     "HealthLog",
     "HealthEventType",
+    # Settings
+    "SystemSettings",
 ]
