@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Clock, LogIn, LogOut } from 'lucide-react';
+import { apiPost } from '@/lib/api';
+import { toastSuccess, toastError } from '@/lib/notify';
 
 export function AbsensiCard() {
   const [hasClockedIn, setHasClockedIn] = useState(false);
@@ -12,22 +14,31 @@ export function AbsensiCard() {
 
   const handleClockIn = async () => {
     setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Backend attendance router endpoints: /attendance/clock-in
+      await apiPost('/attendance/clock-in', {});
       setHasClockedIn(true);
       setClockInTime(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
+      toastSuccess('Berhasil absen masuk');
+    } catch (error: any) {
+      toastError(error.message || 'Gagal absen masuk');
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   const handleClockOut = async () => {
     setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await apiPost('/attendance/clock-out', {});
       setHasClockedIn(false);
       setClockInTime(null);
+      toastSuccess('Berhasil absen pulang');
+    } catch (error: any) {
+      toastError(error.message || 'Gagal absen pulang');
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   return (

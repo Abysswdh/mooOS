@@ -28,10 +28,10 @@ export function MemberTable() {
           <TableRow>
             <TableHead>Nama</TableHead>
             <TableHead>NIK</TableHead>
-            <TableHead>Email / No. HP</TableHead>
+            <TableHead>No. HP</TableHead>
             <TableHead>Simpanan Pokok</TableHead>
             <TableHead>Simpanan Wajib</TableHead>
-            <TableHead className="text-center">Jumlah Sapi</TableHead>
+            <TableHead className="text-center">Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -40,13 +40,12 @@ export function MemberTable() {
               <TableCell className="font-medium">{member.name}</TableCell>
               <TableCell>{member.nik}</TableCell>
               <TableCell>
-                <div>{member.email}</div>
-                <div className="text-xs text-muted-foreground">{member.phone_number || '-'}</div>
+                <div>{member.phone || '-'}</div>
               </TableCell>
               <TableCell>{formatRp(member.simpanan_pokok)}</TableCell>
               <TableCell>{formatRp(member.simpanan_wajib)}</TableCell>
               <TableCell className="text-center font-bold">
-                {member.cow_count || 0}
+                {member.is_active ? 'Aktif' : 'Non-Aktif'}
               </TableCell>
             </TableRow>
           ))}

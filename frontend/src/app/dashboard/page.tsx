@@ -32,7 +32,7 @@ export default function DashboardPage() {
         />
         <KPICard
           title="Stok Pakan"
-          value={`${formatNumber(summary?.total_feed_stock_kg || 0)} kg`}
+          value={`${formatNumber(summary?.feed_stock_kg || 0)} kg`}
           icon={<Wheat className="h-4 w-4" />}
           description="Perkiraan habis dalam bbrp hari"
           isLoading={isLoading}
@@ -40,7 +40,7 @@ export default function DashboardPage() {
         />
         <KPICard
           title="Estimasi Pendapatan"
-          value={summary ? formatRp(summary.today_revenue_est) : "Rp0"}
+          value={summary ? formatRp(summary.today_revenue) : "Rp0"}
           icon={<TrendingUp className="h-4 w-4" />}
           description="Hari ini (Kotor)"
           isLoading={isLoading}

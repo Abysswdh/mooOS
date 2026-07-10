@@ -42,25 +42,25 @@ export function CowTable() {
           <TableRow>
             <TableHead>Kode</TableHead>
             <TableHead>Nama</TableHead>
-            <TableHead>Pemilik (Anggota)</TableHead>
+            <TableHead>ID Pemilik</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Tipe & Gender</TableHead>
-            <TableHead className="text-right">Umur (Bulan)</TableHead>
+            <TableHead className="text-right">Berat (Kg)</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {cows.map((cow) => (
             <TableRow key={cow.id}>
               <TableCell className="font-medium">{cow.code}</TableCell>
-              <TableCell>{cow.name}</TableCell>
-              <TableCell>{cow.member_name || '-'}</TableCell>
+              <TableCell>{cow.name || '-'}</TableCell>
+              <TableCell>{cow.owner_id ? `#${cow.owner_id}` : '-'}</TableCell>
               <TableCell>
                 <StatusBadge status={cow.status} />
               </TableCell>
               <TableCell>
-                {cow.type === 'DAIRY' ? 'Perah' : 'Potong'} • {cow.gender === 'FEMALE' ? 'Betina' : 'Jantan'}
+                {cow.cow_type === 'DAIRY' ? 'Perah' : 'Potong'} • {cow.gender === 'FEMALE' ? 'Betina' : 'Jantan'}
               </TableCell>
-              <TableCell className="text-right">{formatNumber(cow.age_months)}</TableCell>
+              <TableCell className="text-right">{formatNumber(cow.weight_kg)}</TableCell>
             </TableRow>
           ))}
         </TableBody>

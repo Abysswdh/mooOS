@@ -4,8 +4,7 @@ import { useFeed } from '@/hooks/useFeed';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { FeedOrderModal } from '@/components/features/FeedOrderModal';
 import { KPICard } from '@/components/ui/KPICard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatNumber, formatRp } from '@/lib/formatters';
@@ -22,11 +21,9 @@ export default function PakanPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Manajemen Pakan</h2>
-          <p className="text-muted-foreground">Kelola stok pakan dan pembelian.</p>
+          <p className="text-muted-foreground">Pantau stok pakan dan kelola pemesanan (PO) ke supplier.</p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Beli Pakan
-        </Button>
+        <FeedOrderModal />
       </div>
 
       {stock && (

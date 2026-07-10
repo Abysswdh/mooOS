@@ -33,6 +33,7 @@ const MENU_ITEMS = [
   { title: 'Pakan', icon: Wheat, href: '/dashboard/pakan' },
   { title: 'Hasil Susu', icon: Milk, href: '/dashboard/hasil' },
   { title: 'Limbah', icon: Recycle, href: '/dashboard/limbah' },
+  { title: 'Harga Pasar', icon: Receipt, href: '/dashboard/harga' },
   { title: 'Laporan', icon: FileBarChart, href: '/dashboard/laporan' },
   { title: 'Anggota', icon: Users, href: '/dashboard/anggota' },
 ];
@@ -79,6 +80,7 @@ export function Sidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
+            {/* @ts-ignore - asChild typing error from Radix/Shadcn */}
             <SidebarMenuButton asChild isActive={pathname === '/dashboard/pengaturan'}>
               <Link href="/dashboard/pengaturan">
                 <Settings className="h-4 w-4" />

@@ -52,8 +52,8 @@ export function ChecklistPanel() {
     );
   }
 
-  const pendingTasks = tasks.filter(t => !t.is_completed);
-  const completedCount = tasks.filter(t => t.is_completed).length;
+  const pendingTasks = tasks.filter(t => !t.completed);
+  const completedCount = tasks.filter(t => t.completed).length;
 
   return (
     <Card className="h-full flex flex-col">
@@ -102,11 +102,6 @@ export function ChecklistPanel() {
                     <PriorityBadge priority={task.priority as ChecklistPriority} />
                   </div>
                   <p className="text-xs text-muted-foreground">{task.description}</p>
-                  {task.barn_name && (
-                    <div className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                      Kandang: {task.barn_name}
-                    </div>
-                  )}
                 </div>
               </div>
             ))}

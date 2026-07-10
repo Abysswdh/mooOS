@@ -4,8 +4,7 @@ import { useMilk } from '@/hooks/useMilk';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { MilkCreateModal } from '@/components/features/MilkCreateModal';
 import { KPICard } from '@/components/ui/KPICard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatNumber } from '@/lib/formatters';
@@ -23,9 +22,7 @@ export default function HasilSusuPage() {
           <h2 className="text-2xl font-bold tracking-tight">Hasil Susu</h2>
           <p className="text-muted-foreground">Pantau produksi susu harian dari semua kandang.</p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Catat Susu
-        </Button>
+        <MilkCreateModal />
       </div>
 
       {summary && (
