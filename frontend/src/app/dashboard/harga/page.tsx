@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import { apiGet, apiPost } from '@/lib/api';
 import { toastSuccess, toastError, toastInfo } from '@/lib/notify';
 import { TodayPricesSummary, MarketPriceInput } from '@/types';
-import { Receipt, AlertCircle } from 'lucide-react';
+import { Receipt, AlertCircle, MessageCircle, Send } from 'lucide-react';
 
 const priceSchema = z.object({
   pakan: z.coerce.number().min(1, 'Harga pakan tidak boleh kosong'),
@@ -36,6 +36,7 @@ const priceSchema = z.object({
 export default function HargaPasarPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRequestingPoll, setIsRequestingPoll] = useState(false);
   const [todaySummary, setTodaySummary] = useState<TodayPricesSummary | null>(null);
 
   const form = useForm<z.infer<typeof priceSchema>>({
@@ -67,6 +68,18 @@ export default function HargaPasarPage() {
   useEffect(() => {
     fetchTodayPrices();
   }, []);
+
+  const handleRequestTelegramPoll = async () => {
+    setIsRequestingPoll(true);
+    try {
+      await apiPost('/telegram/request-price-poll');
+      toastSuccess('Voting harga berhasil dikirim ke Telegram grup!');
+    } catch (error: any) {
+      toastError(error.message || 'Gagal mengirim permintaan voting');
+    } finally {
+      setIsRequestingPoll(false);
+    }
+  };
 
   const onSubmit = async (values: z.infer<typeof priceSchema>) => {
     setIsSubmitting(true);
@@ -134,81 +147,106 @@ export default function HargaPasarPage() {
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Receipt className="w-5 h-5" />
-            Input Harga Hari Ini
-          </CardTitle>
-          <CardDescription>
-            Harga ini akan digunakan sebagai dasar perhitungan transaksi dan PO otomatis.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="border-blue-200 bg-blue-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-700">
+              <MessageCircle className="w-5 h-5" />
+              Voting Telegram
+            </CardTitle>
+            <CardDescription className="text-blue-600/80">
+              Kirim permintaan ke grup Telegram untuk mendapatkan update harga terbaru dari para peternak.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              className="w-full bg-blue-600 hover:bg-blue-700" 
+              onClick={handleRequestTelegramPoll}
+              disabled={isRequestingPoll}
+            >
+              <Send className="mr-2 h-4 w-4" /> 
+              {isRequestingPoll ? 'Mengirim...' : 'Minta Harga dari Grup'}
+            </Button>
+            <p className="text-xs text-blue-600/70 mt-3 text-center">
+              Bot akan otomatis mengumpulkan suara dan menentukan harga optimal.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5" />
+              Input Manual
+            </CardTitle>
+            <CardDescription>
+              Isi harga secara manual jika tidak menggunakan voting Telegram.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
                   name="pakan"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Harga Pakan (per kg)</FormLabel>
-                      <FormControl>
+                    <FormItem className="grid grid-cols-3 items-center gap-2 space-y-0">
+                      <FormLabel className="text-right">Pakan (kg)</FormLabel>
+                      <FormControl className="col-span-2">
                         <div className="relative">
-                          <span className="absolute left-3 top-2.5 text-muted-foreground">Rp</span>
-                          <Input type="number" className="pl-9" {...field} />
+                          <span className="absolute left-3 top-2.5 text-muted-foreground text-sm">Rp</span>
+                          <Input type="number" className="pl-9 h-9" {...field} />
                         </div>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="col-span-3 text-right" />
                     </FormItem>
                   )}
                 />
-
+                
                 <FormField
                   control={form.control}
                   name="susu"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Harga Susu (per liter)</FormLabel>
-                      <FormControl>
+                    <FormItem className="grid grid-cols-3 items-center gap-2 space-y-0">
+                      <FormLabel className="text-right">Susu (liter)</FormLabel>
+                      <FormControl className="col-span-2">
                         <div className="relative">
-                          <span className="absolute left-3 top-2.5 text-muted-foreground">Rp</span>
-                          <Input type="number" className="pl-9" {...field} />
+                          <span className="absolute left-3 top-2.5 text-muted-foreground text-sm">Rp</span>
+                          <Input type="number" className="pl-9 h-9" {...field} />
                         </div>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="col-span-3 text-right" />
                     </FormItem>
                   )}
                 />
-
+                
                 <FormField
                   control={form.control}
                   name="pupuk"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Harga Pupuk (per kg)</FormLabel>
-                      <FormControl>
+                    <FormItem className="grid grid-cols-3 items-center gap-2 space-y-0">
+                      <FormLabel className="text-right">Pupuk (kg)</FormLabel>
+                      <FormControl className="col-span-2">
                         <div className="relative">
-                          <span className="absolute left-3 top-2.5 text-muted-foreground">Rp</span>
-                          <Input type="number" className="pl-9" {...field} />
+                          <span className="absolute left-3 top-2.5 text-muted-foreground text-sm">Rp</span>
+                          <Input type="number" className="pl-9 h-9" {...field} />
                         </div>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="col-span-3 text-right" />
                     </FormItem>
                   )}
                 />
-              </div>
 
-              <div className="flex justify-end pt-4 border-t">
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Menyimpan...' : 'Simpan Harga Hari Ini'}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                <div className="flex justify-end pt-2">
+                  <Button type="submit" disabled={isSubmitting} size="sm">
+                    {isSubmitting ? 'Menyimpan...' : 'Simpan Manual'}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

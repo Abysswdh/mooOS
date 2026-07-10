@@ -256,6 +256,13 @@ export interface AttendanceLog {
   created_at: string;
 }
 
+export interface Settings {
+  koperasi_name: string;
+  address: string;
+  enable_telegram_notif: boolean;
+  auto_price_fluctuation: boolean;
+}
+
 /** Attendance clock-in response (subset) */
 export interface AttendanceClockIn {
   id: number;
