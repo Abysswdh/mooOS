@@ -66,9 +66,7 @@ export function FertilizerOfferModal() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button><Plus className="mr-2 h-4 w-4" /> Jual Pupuk (Lelang)</Button>
-      </DialogTrigger>
+      <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Jual Pupuk (Lelang)</Button>} />
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Jual Pupuk via Lelang Telegram</DialogTitle>

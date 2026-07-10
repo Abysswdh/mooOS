@@ -40,7 +40,8 @@ export function AbsensiCard() {
         <Image 
           src="/vincelli.png" 
           alt="Profile Picture" 
-          fill
+          width={96}
+          height={96}
           className="object-cover"
         />
       </div>

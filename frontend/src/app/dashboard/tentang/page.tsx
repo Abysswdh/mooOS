@@ -21,6 +21,7 @@ export default function TentangPage() {
               width={300} 
               height={100} 
               className="h-20 w-auto object-contain" 
+              style={{ width: 'auto', height: 'auto' }}
               priority 
             />
           </div>

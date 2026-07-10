@@ -1,6 +1,8 @@
 'use client';
 
 import { useFeed } from '@/hooks/useFeed';
+import { usePrices } from '@/hooks/usePrices';
+import { PriceHistoryChart } from '@/components/features/PriceHistoryChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -14,6 +16,7 @@ import type { FeedOrder } from '@/types';
 
 export default function PakanPage() {
   const { stock, orders, isLoading, error, refetch } = useFeed();
+  const { prices, isLoading: isPricesLoading } = usePrices();
 
   if (isLoading) return <LoadingSpinner />;
   if (error) return <ErrorState message={error} onRetry={refetch} />;
@@ -75,6 +78,15 @@ export default function PakanPage() {
             icon={<Wheat className="h-4 w-4" />} 
           />
         </div>
+      )}
+
+      {/* Tambahan Grafik Harga */}
+      {!isPricesLoading && (
+        <PriceHistoryChart 
+          data={prices} 
+          title="Histori Harga Pasar"
+          description="Pergerakan harga Pakan, Susu, dan Pupuk hasil lelang Telegram."
+        />
       )}
 
       <Card>

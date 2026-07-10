@@ -47,7 +47,7 @@ export function Sidebar() {
     <ShadcnSidebar collapsible="none">
       <SidebarHeader className="pt-8 pb-6 px-6 flex items-center">
         <div className="flex items-center w-full">
-          <Image src="/mooos-logo.png" alt="MooOS Logo" width={150} height={40} className="h-10 w-auto object-contain" priority />
+          <Image src="/mooos-logo.png" alt="MooOS Logo" width={150} height={40} className="h-10 w-auto object-contain" style={{ width: 'auto', height: 'auto' }} priority />
         </div>
       </SidebarHeader>
 

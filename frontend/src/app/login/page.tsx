@@ -43,7 +43,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-xl border-t-4 border-t-primary">
         <CardHeader className="space-y-4 text-center pb-8">
           <div className="flex justify-center mb-2">
-            <Image src="/mooos-logo.png" alt="MooOS Logo" width={280} height={80} className="h-16 w-auto object-contain" priority />
+            <Image src="/mooos-logo.png" alt="MooOS Logo" width={280} height={80} className="h-16 w-auto object-contain" style={{ width: 'auto', height: 'auto' }} priority />
           </div>
           <CardDescription className="text-base">
             Sistem Informasi Koperasi Ternak Sapi Perah

@@ -68,9 +68,7 @@ export function MilkOfferModal() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button><Plus className="mr-2 h-4 w-4" /> Jual Susu (Lelang)</Button>
-      </DialogTrigger>
+      <DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" /> Jual Susu (Lelang)</Button>} />
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Jual Susu via Lelang Telegram</DialogTitle>

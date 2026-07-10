@@ -10,6 +10,30 @@ import { useState, useEffect, useCallback } from 'react';
 import { apiGet, apiPost, ApiError } from '@/lib/api';
 import type { DashboardSummary, AttendanceLog, AttendanceClockIn } from '@/types';
 
+export interface PieData {
+  name: string;
+  value: number;
+  color?: string;
+}
+
+export interface FinancialSummary {
+  income: PieData[];
+  expenses: PieData[];
+  net_profit: number;
+}
+
+export interface ShuDistributionItem {
+  member_name: string;
+  total_cows: number;
+  total_milk_contribution_liters: number;
+  shu_amount: number;
+}
+
+export interface ShuDistribution {
+  ratios: Record<string, number>;
+  distribution: ShuDistributionItem[];
+}
+
 interface UseDashboardReturn {
   summary: DashboardSummary | null;
   isLoading: boolean;
@@ -125,4 +149,34 @@ export function useAttendance(): UseAttendanceReturn {
   }, []);
 
   return { attendance, isClockedIn, isLoading, clockIn, clockOut, isSubmitting };
+}
+
+export function useFinancialSummary() {
+  const [data, setData] = useState<FinancialSummary | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiGet<FinancialSummary>('/reports/financial-summary')
+      .then((res) => { if (!cancelled) setData(res); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  return { data, isLoading };
+}
+
+export function useShuDistribution() {
+  const [data, setData] = useState<ShuDistribution | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiGet<ShuDistribution>('/reports/shu-distribution')
+      .then((res) => { if (!cancelled) setData(res); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  return { data, isLoading };
 }
