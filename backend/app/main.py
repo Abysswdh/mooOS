@@ -40,10 +40,23 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Register routers (will be added in Step 3)
-    # from app.routers import auth, cows, members, ...
-    # app.include_router(auth.router, prefix="/auth", tags=["Auth"])
-    # etc.
+    # Register routers
+    from app.routers import auth, cows, members, dashboard, checklist, feed, milk, waste
+    app.include_router(auth.router)
+    app.include_router(cows.router)
+    app.include_router(members.router)
+    app.include_router(dashboard.router)
+    app.include_router(checklist.router)
+    app.include_router(feed.router)
+    app.include_router(milk.router)
+    app.include_router(waste.waste_router)
+    app.include_router(waste.fertilizer_router)
+    
+    from app.routers import prices, attendance, notifications, health
+    app.include_router(prices.router)
+    app.include_router(attendance.router)
+    app.include_router(notifications.router)
+    app.include_router(health.router)
 
     return app
 
