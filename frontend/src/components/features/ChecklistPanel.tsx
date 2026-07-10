@@ -1,0 +1,112 @@
+'use client';
+
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useChecklist, useChecklistMutations } from '@/hooks/useChecklist';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { CheckCircle2, Circle, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { ChecklistPriority } from '@/types';
+
+function PriorityBadge({ priority }: { priority: ChecklistPriority }) {
+  if (priority === 'HIGH') {
+    return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-destructive/10 text-destructive border border-destructive/20">URGENT</span>;
+  }
+  if (priority === 'MEDIUM') {
+    return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">NORMAL</span>;
+  }
+  return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-600 border border-blue-500/20">INFO</span>;
+}
+
+export function ChecklistPanel() {
+  const { tasks, isLoading, error, refetch } = useChecklist();
+  const { completeTask, isSubmitting } = useChecklistMutations();
+
+  if (isLoading) {
+    return (
+      <Card className="h-full">
+        <CardHeader>
+          <CardTitle>Checklist Rutinitas</CardTitle>
+          <CardDescription>Sistem MRP MooOS</CardDescription>
+        </CardHeader>
+        <CardContent className="h-64 flex items-center justify-center">
+          <LoadingSpinner />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="h-full">
+        <CardHeader>
+          <CardTitle>Checklist Rutinitas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ErrorState message={error} onRetry={refetch} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const pendingTasks = tasks.filter(t => !t.is_completed);
+  const completedCount = tasks.filter(t => t.is_completed).length;
+
+  return (
+    <Card className="h-full flex flex-col">
+      <CardHeader className="pb-3 border-b">
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle className="text-lg">Checklist Harian</CardTitle>
+            <CardDescription>Selesai: {completedCount} / {tasks.length}</CardDescription>
+          </div>
+          <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
+            {pendingTasks.length} tugas
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 overflow-y-auto p-0">
+        {pendingTasks.length === 0 ? (
+          <EmptyState 
+            title="Semua tugas selesai!" 
+            description="Kandang sudah beres untuk shift ini."
+          />
+        ) : (
+          <div className="divide-y">
+            {pendingTasks.map((task) => (
+              <div key={task.id} className="p-4 flex gap-4 hover:bg-muted/50 transition-colors">
+                <button 
+                  className={cn(
+                    "mt-1 flex-shrink-0 text-muted-foreground hover:text-primary transition-colors",
+                    isSubmitting && "opacity-50 cursor-not-allowed"
+                  )}
+                  onClick={async () => {
+                    await completeTask(task.id, "Diselesaikan via Web");
+                    refetch();
+                  }}
+                  disabled={isSubmitting}
+                >
+                  <Circle className="w-6 h-6" />
+                </button>
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="font-medium text-sm leading-tight">{task.title}</h4>
+                    <PriorityBadge priority={task.priority as ChecklistPriority} />
+                  </div>
+                  <p className="text-xs text-muted-foreground">{task.description}</p>
+                  {task.barn_name && (
+                    <div className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                      Kandang: {task.barn_name}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
