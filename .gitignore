@@ -1,1 +1,18 @@
 node_modules
+.next
+__pycache__
+*.pyc
+*.pyo
+.env
+*.db
+*.sqlite3
+.venv
+venv
+env
+dist
+build
+.DS_Store
+Thumbs.db
+
+# Context files — internal team docs, never push
+context/
