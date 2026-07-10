@@ -30,11 +30,10 @@ def create_milk_record(
         
     new_record = MilkRecord(
         cow_id=record_in.cow_id,
-        milker_id=current_user.id,
-        volume_liters=record_in.liters,
-        quality_score=100.0,  # Default or parameter
+        date=record_in.date,
+        liters=record_in.liters,
+        recorded_by=current_user.name,
     )
-    # The date is set to now by default if we don't overwrite it, but we can respect record_in.date
     # assuming we just use created_at for it.
     db.add(new_record)
     db.commit()
@@ -61,8 +60,8 @@ def get_milk_records(
             id=r.id,
             cow_id=r.cow_id,
             date=r.created_at.date(),
-            liters=r.volume_liters,
-            recorded_by=r.milker.full_name if r.milker else None,
+            liters=r.liters,
+            recorded_by=r.recorded_by,
             created_at=r.created_at
         )
         response_items.append(resp)
@@ -81,10 +80,10 @@ def get_milk_summary(
     week_ago = today - timedelta(days=7)
     month_ago = today - timedelta(days=30)
     
-    today_total = db.query(func.sum(MilkRecord.volume_liters)).filter(func.date(MilkRecord.created_at) == today).scalar() or 0.0
-    yesterday_total = db.query(func.sum(MilkRecord.volume_liters)).filter(func.date(MilkRecord.created_at) == yesterday).scalar() or 0.0
-    week_total = db.query(func.sum(MilkRecord.volume_liters)).filter(func.date(MilkRecord.created_at) >= week_ago).scalar() or 0.0
-    month_total = db.query(func.sum(MilkRecord.volume_liters)).filter(func.date(MilkRecord.created_at) >= month_ago).scalar() or 0.0
+    today_total = db.query(func.sum(MilkRecord.liters)).filter(func.date(MilkRecord.created_at) == today).scalar() or 0.0
+    yesterday_total = db.query(func.sum(MilkRecord.liters)).filter(func.date(MilkRecord.created_at) == yesterday).scalar() or 0.0
+    week_total = db.query(func.sum(MilkRecord.liters)).filter(func.date(MilkRecord.created_at) >= week_ago).scalar() or 0.0
+    month_total = db.query(func.sum(MilkRecord.liters)).filter(func.date(MilkRecord.created_at) >= month_ago).scalar() or 0.0
     
     active_dairy_cows = db.query(Cow).filter(Cow.status == CowStatus.AVAILABLE).count()
     

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { apiPost, setAuthToken } from '@/lib/api';
+import { apiPost } from '@/lib/api';
 import { toastSuccess, toastError } from '@/lib/notify';
 
 export default function LoginPage() {
@@ -21,21 +21,17 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const formData = new URLSearchParams();
-      formData.append('username', email);
-      formData.append('password', password);
-
-      const res = await apiPost<{ access_token: string; token_type: string }>('/auth/login', formData, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
+      const res = await apiPost<{ access_token: string }>('/auth/login', { 
+        email, 
+        password 
       });
 
-      setAuthToken(res.access_token);
+      localStorage.setItem('token', res.access_token);
+
       toastSuccess('Berhasil masuk ke MooOS');
       router.push('/dashboard');
     } catch (err: any) {
-      toastError(err.message || 'Gagal login. Periksa email dan password Anda.');
+      toastError(err.message || 'Gagal login.');
     } finally {
       setIsLoading(false);
     }

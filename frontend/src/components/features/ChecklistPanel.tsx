@@ -70,15 +70,15 @@ export function ChecklistPanel() {
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto p-0">
         {pendingTasks.length === 0 ? (
-          <EmptyState 
-            title="Semua tugas selesai!" 
+          <EmptyState
+            title="Semua tugas selesai!"
             description="Kandang sudah beres untuk shift ini."
           />
         ) : (
           <div className="divide-y">
             {pendingTasks.map((task) => (
               <div key={task.id} className="p-4 flex gap-4 hover:bg-muted/50 transition-colors">
-                <button 
+                <button
                   className={cn(
                     "mt-1 flex-shrink-0 text-muted-foreground hover:text-primary transition-colors",
                     isSubmitting && "opacity-50 cursor-not-allowed"

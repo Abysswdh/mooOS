@@ -22,7 +22,6 @@ const ROUTE_TITLES: Record<string, string> = {
   '/dashboard/pakan': 'Manajemen Pakan',
   '/dashboard/hasil': 'Hasil Produksi Susu',
   '/dashboard/limbah': 'Pengolahan Limbah',
-  '/dashboard/transaksi': 'Transaksi Koperasi',
   '/dashboard/laporan': 'Laporan & Statistik',
   '/dashboard/anggota': 'Data Anggota',
   '/dashboard/pengaturan': 'Pengaturan Sistem',

@@ -33,7 +33,6 @@ const MENU_ITEMS = [
   { title: 'Pakan', icon: Wheat, href: '/dashboard/pakan' },
   { title: 'Hasil Susu', icon: Milk, href: '/dashboard/hasil' },
   { title: 'Limbah', icon: Recycle, href: '/dashboard/limbah' },
-  { title: 'Transaksi', icon: Receipt, href: '/dashboard/transaksi' },
   { title: 'Laporan', icon: FileBarChart, href: '/dashboard/laporan' },
   { title: 'Anggota', icon: Users, href: '/dashboard/anggota' },
 ];
@@ -57,19 +56,18 @@ export function Sidebar() {
             <SidebarMenu>
               {MENU_ITEMS.map((item) => {
                 const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-                
+
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      tooltip={item.title}
-                    >
-                      <Link href={item.href}>
+                    <Link href={item.href} className="w-full">
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        tooltip={item.title}
+                      >
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
+                      </SidebarMenuButton>
+                    </Link>
                   </SidebarMenuItem>
                 );
               })}

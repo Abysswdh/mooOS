@@ -8,7 +8,7 @@ from app.models.cow import Cow, CowStatus
 from app.models.member import Member
 from app.models.milk import MilkRecord
 from app.models.feed import FeedStock
-from app.models.waste import FertilizerBatch, FertilizerStatus
+from app.models.waste import WasteBatch, WasteBatchStatus
 from app.models.user import User
 from app.schemas.dashboard import DashboardSummary
 from app.dependencies import get_current_user
@@ -35,22 +35,21 @@ def get_dashboard_summary(
     
     # Milk
     today = date.today()
-    today_milk = db.query(func.sum(MilkRecord.volume_liters)).filter(
+    today_milk = db.query(func.sum(MilkRecord.liters)).filter(
         func.date(MilkRecord.created_at) == today
     ).scalar() or 0.0
     
-    # Feed Stock
-    feed_stock = db.query(func.sum(FeedStock.quantity_kg)).scalar() or 0.0
+    # Feed Stock (ledger sum)
+    feed_stock = db.query(func.sum(FeedStock.change_kg)).scalar() or 0.0
     
     # Feed days remaining
-    # Simple logic: assume active_cows * DEFAULT_FEED_KG_PER_COW_PER_DAY
     daily_feed_req = active_cows * settings.DEFAULT_FEED_KG_PER_COW_PER_DAY
     feed_days_remaining = feed_stock / daily_feed_req if daily_feed_req > 0 else 999.0
     feed_is_critical = feed_days_remaining <= settings.FEED_CRITICAL_DAYS_THRESHOLD
     
     # Fertilizer
-    fertilizer_ready = db.query(func.sum(FertilizerBatch.volume_kg)).filter(
-        FertilizerBatch.status == FertilizerStatus.READY
+    fertilizer_ready = db.query(func.sum(WasteBatch.estimated_fertilizer_kg)).filter(
+        WasteBatch.status == WasteBatchStatus.READY
     ).scalar() or 0.0
     
     # Revenue (Mock for now, can be implemented by querying Transaction/Payment tables later)

@@ -16,12 +16,18 @@ class Base(DeclarativeBase):
 
 _settings = get_settings()
 
-engine = create_engine(
-    _settings.DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
-)
+if _settings.DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(
+        _settings.DATABASE_URL,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    engine = create_engine(
+        _settings.DATABASE_URL,
+        pool_pre_ping=True,
+        pool_size=10,
+        max_overflow=20,
+    )
 
 SessionLocal = sessionmaker(
     bind=engine,

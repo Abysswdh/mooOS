@@ -26,9 +26,9 @@ def seed_db():
 
     print("Seeding admin user...")
     admin = User(
-        email="admin@mooos.local",
-        hashed_password=get_password_hash("admin123"),
-        full_name="Admin MooOS",
+        email="admin@mooos.com",
+        password_hash=get_password_hash("admin123"),
+        name="Admin MooOS",
         role=UserRole.ADMIN,
         is_active=True
     )
@@ -73,11 +73,9 @@ def seed_db():
     
     print("Seeding feed stock...")
     feed_stock = FeedStock(
-        feed_type="RUMPUT_GAJAH",
-        source="INTERNAL",
-        quantity_kg=5000.0,
-        price_per_kg=500.0,
-        notes="Stok awal"
+        date=datetime.now(),
+        change_kg=5000.0,
+        reason="Stok awal"
     )
     db.add(feed_stock)
     db.commit()
@@ -88,10 +86,9 @@ def seed_db():
         if cow.status == CowStatus.AVAILABLE:
             record = MilkRecord(
                 cow_id=cow.id,
-                milker_id=admin.id,
-                volume_liters=random.uniform(10, 20),
-                quality_score=random.uniform(80, 100),
-                created_at=today
+                date=today.date(),
+                liters=random.uniform(10, 20),
+                recorded_by="Admin MooOS"
             )
             db.add(record)
     db.commit()
