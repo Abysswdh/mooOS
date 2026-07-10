@@ -59,6 +59,7 @@ from app.schemas.attendance import (
 )
 from app.schemas.dashboard import DashboardSummary, HealthCheckResponse
 from app.schemas.health_log import HealthLogCreate, HealthLogListResponse, HealthLogResponse
+from app.schemas.settings import SettingsResponse, SettingsUpdate
 
 __all__ = [
     # Auth
@@ -130,4 +131,7 @@ __all__ = [
     "HealthLogCreate",
     "HealthLogResponse",
     "HealthLogListResponse",
+    # Settings
+    "SettingsResponse",
+    "SettingsUpdate",
 ]

@@ -10,6 +10,10 @@ from app.models.barn import Barn
 from app.models.cow import Cow, CowStatus, CowType, CowGender
 from app.models.feed import FeedStock
 from app.models.milk import MilkRecord
+from app.models.waste import WasteBatch, WasteBatchStatus
+from app.models.market_price import DailyMarketPrice, MarketItemType, PriceSource
+from app.models.health_log import HealthLog, HealthEventType
+from app.models.checklist import ChecklistTask, ChecklistPriority, ChecklistActionType
 from app.utils.security import get_password_hash
 
 
@@ -81,6 +85,9 @@ def seed_db():
         db.add(cow)
     db.commit()
     
+    for c in cows:
+        db.refresh(c)
+
     print("Seeding feed stock...")
     feed_stock = FeedStock(
         date=datetime.now(),
@@ -101,6 +108,78 @@ def seed_db():
                 recorded_by="Admin MooOS"
             )
             db.add(record)
+    db.commit()
+
+    print("Seeding waste batches...")
+    for barn in [barn_a, barn_b]:
+        batch_1 = WasteBatch(
+            barn_id=barn.id,
+            batch_code=f"WB-{barn.id}-{today.strftime('%Y%m%d')}-01",
+            raw_waste_kg=500.0,
+            estimated_fertilizer_kg=250.0,
+            status=WasteBatchStatus.FERMENTING,
+            fermentation_start=today.date() - timedelta(days=5),
+        )
+        batch_2 = WasteBatch(
+            barn_id=barn.id,
+            batch_code=f"WB-{barn.id}-{today.strftime('%Y%m%d')}-02",
+            raw_waste_kg=400.0,
+            estimated_fertilizer_kg=200.0,
+            status=WasteBatchStatus.READY,
+            fermentation_start=today.date() - timedelta(days=15),
+            fermentation_end=today.date() - timedelta(days=1),
+        )
+        db.add(batch_1)
+        db.add(batch_2)
+    db.commit()
+
+    print("Seeding market prices...")
+    for i in range(7):
+        d = today.date() - timedelta(days=i)
+        db.add(DailyMarketPrice(date=d, item_type=MarketItemType.PAKAN, price_per_unit=5500 + random.randint(-200, 200), source=PriceSource.ADMIN))
+        db.add(DailyMarketPrice(date=d, item_type=MarketItemType.SUSU, price_per_unit=8500 + random.randint(-300, 300), source=PriceSource.ADMIN))
+        db.add(DailyMarketPrice(date=d, item_type=MarketItemType.PUPUK, price_per_unit=1200 + random.randint(-100, 100), source=PriceSource.ADMIN))
+    db.commit()
+
+    print("Seeding health logs...")
+    for cow in cows:
+        if cow.status == CowStatus.SICK:
+            log = HealthLog(
+                cow_id=cow.id,
+                event_type=HealthEventType.SICK,
+                description="Diagnosa mastitis ringan.",
+                reported_by="Admin MooOS",
+            )
+            db.add(log)
+    db.commit()
+
+    print("Seeding checklist tasks...")
+    tasks = [
+        ChecklistTask(
+            date=today.date(),
+            priority=ChecklistPriority.HIGH,
+            title="Stok pakan menipis (sisa < 1000 kg)",
+            description="Segera buat Purchase Order ke supplier.",
+            action_type=ChecklistActionType.CREATE_PO,
+        ),
+        ChecklistTask(
+            date=today.date(),
+            priority=ChecklistPriority.MEDIUM,
+            title="Ada 3 sapi sakit di Kandang A",
+            description="Periksa dan berikan penanganan medis.",
+            action_type=ChecklistActionType.NAVIGATE,
+            action_payload='{"url": "/cows?status=SICK"}'
+        ),
+        ChecklistTask(
+            date=today.date(),
+            priority=ChecklistPriority.INFO,
+            title="Pupuk kompos Batch 02 siap dijual",
+            description="Broadcast penawaran pupuk ke Telegram Group.",
+            action_type=ChecklistActionType.CREATE_OFFER,
+        )
+    ]
+    for t in tasks:
+        db.add(t)
     db.commit()
 
     print("Seeding finished!")
