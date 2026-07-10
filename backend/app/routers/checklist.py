@@ -20,7 +20,7 @@ def _run_mrp_engine(db: Session, today: date):
     settings = get_settings()
     
     # 1. Feed Stock Check
-    feed_stock = db.query(func.sum(FeedStock.change_kg)).scalar() or 0.0
+    feed_stock = float(db.query(func.sum(FeedStock.change_kg)).scalar() or 0.0)
     active_cows = db.query(Cow).filter(Cow.status == CowStatus.AVAILABLE).count()
     daily_feed_req = active_cows * settings.DEFAULT_FEED_KG_PER_COW_PER_DAY
     feed_days_remaining = feed_stock / daily_feed_req if daily_feed_req > 0 else 999.0

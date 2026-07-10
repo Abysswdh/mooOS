@@ -22,7 +22,7 @@ def get_feed_stock(
     """Get current feed stock summary."""
     settings = get_settings()
     
-    current_stock = db.query(func.sum(FeedStock.change_kg)).scalar() or 0.0
+    current_stock = float(db.query(func.sum(FeedStock.change_kg)).scalar() or 0.0)
     
     # Calculate daily consumption
     active_cows = db.query(Cow).filter(Cow.status == CowStatus.AVAILABLE).count()

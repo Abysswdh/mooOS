@@ -1,45 +1,35 @@
 'use client';
 
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Clock, LogIn, LogOut } from 'lucide-react';
-import { apiPost } from '@/lib/api';
+import { useAttendance } from '@/hooks/useDashboard';
 import { toastSuccess, toastError } from '@/lib/notify';
 
 export function AbsensiCard() {
-  const [hasClockedIn, setHasClockedIn] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [clockInTime, setClockInTime] = useState<string | null>(null);
+  const { attendance, isClockedIn, isLoading, clockIn, clockOut, isSubmitting } = useAttendance();
 
   const handleClockIn = async () => {
-    setIsSubmitting(true);
     try {
-      // Backend attendance router endpoints: /attendance/clock-in
-      await apiPost('/attendance/clock-in', {});
-      setHasClockedIn(true);
-      setClockInTime(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
+      await clockIn();
       toastSuccess('Berhasil absen masuk');
     } catch (error: any) {
       toastError(error.message || 'Gagal absen masuk');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const handleClockOut = async () => {
-    setIsSubmitting(true);
     try {
-      await apiPost('/attendance/clock-out', {});
-      setHasClockedIn(false);
-      setClockInTime(null);
+      await clockOut();
       toastSuccess('Berhasil absen pulang');
     } catch (error: any) {
       toastError(error.message || 'Gagal absen pulang');
-    } finally {
-      setIsSubmitting(false);
     }
   };
+
+  const clockInTime = attendance?.clock_in
+    ? new Date(attendance.clock_in).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+    : null;
 
   return (
     <Card className="h-full flex flex-col">
@@ -51,7 +41,12 @@ export function AbsensiCard() {
       </CardHeader>
       <CardContent className="flex-1 flex flex-col justify-center items-center gap-4 py-6">
         <div className="text-center space-y-2">
-          {hasClockedIn ? (
+          {isLoading ? (
+            <>
+              <p className="text-sm text-muted-foreground">Memuat status kehadiran...</p>
+              <p className="text-3xl font-bold text-muted-foreground">-- : --</p>
+            </>
+          ) : isClockedIn ? (
             <>
               <p className="text-sm text-muted-foreground">Anda sudah absen masuk pada</p>
               <p className="text-3xl font-bold text-emerald-600">{clockInTime}</p>
@@ -63,23 +58,23 @@ export function AbsensiCard() {
             </>
           )}
         </div>
-        
+
         <div className="w-full mt-4">
-          {hasClockedIn ? (
-            <Button 
-              variant="destructive" 
-              className="w-full" 
+          {isClockedIn ? (
+            <Button
+              variant="destructive"
+              className="w-full"
               onClick={handleClockOut}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isLoading}
             >
               <LogOut className="w-4 h-4 mr-2" />
               Absen Pulang
             </Button>
           ) : (
-            <Button 
-              className="w-full bg-emerald-600 hover:bg-emerald-700" 
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-700"
               onClick={handleClockIn}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isLoading}
             >
               <LogIn className="w-4 h-4 mr-2" />
               Absen Masuk

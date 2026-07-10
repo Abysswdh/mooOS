@@ -39,18 +39,18 @@ def get_dashboard_summary(
         func.date(MilkRecord.created_at) == today
     ).scalar() or 0.0
     
-    # Feed Stock (ledger sum)
-    feed_stock = db.query(func.sum(FeedStock.change_kg)).scalar() or 0.0
+    # Feed Stock (ledger sum) — cast from Decimal to float
+    feed_stock = float(db.query(func.sum(FeedStock.change_kg)).scalar() or 0.0)
     
     # Feed days remaining
     daily_feed_req = active_cows * settings.DEFAULT_FEED_KG_PER_COW_PER_DAY
     feed_days_remaining = feed_stock / daily_feed_req if daily_feed_req > 0 else 999.0
     feed_is_critical = feed_days_remaining <= settings.FEED_CRITICAL_DAYS_THRESHOLD
     
-    # Fertilizer
-    fertilizer_ready = db.query(func.sum(WasteBatch.estimated_fertilizer_kg)).filter(
+    # Fertilizer — cast from Decimal to float
+    fertilizer_ready = float(db.query(func.sum(WasteBatch.estimated_fertilizer_kg)).filter(
         WasteBatch.status == WasteBatchStatus.READY
-    ).scalar() or 0.0
+    ).scalar() or 0.0)
     
     # Revenue (Mock for now, can be implemented by querying Transaction/Payment tables later)
     # Since we don't have a generic transaction table in the current context yet.

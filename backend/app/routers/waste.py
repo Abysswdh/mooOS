@@ -67,10 +67,10 @@ def get_waste_summary(
     current_user: User = Depends(get_current_user)
 ):
     """Get waste processing summary."""
-    total_raw = db.query(func.sum(WasteBatch.raw_waste_kg)).scalar() or 0.0
-    total_ready = db.query(func.sum(WasteBatch.estimated_fertilizer_kg)).filter(
+    total_raw = float(db.query(func.sum(WasteBatch.raw_waste_kg)).scalar() or 0.0)
+    total_ready = float(db.query(func.sum(WasteBatch.estimated_fertilizer_kg)).filter(
         WasteBatch.status == WasteBatchStatus.READY
-    ).scalar() or 0.0
+    ).scalar() or 0.0)
     
     fermenting = db.query(WasteBatch).filter(WasteBatch.status == WasteBatchStatus.FERMENTING).count()
     ready = db.query(WasteBatch).filter(WasteBatch.status == WasteBatchStatus.READY).count()

@@ -11,7 +11,7 @@
 // ---------------------------------------------------------------------------
 
 export type CowStatus =
-  | 'HEALTHY'
+  | 'AVAILABLE'
   | 'SICK'
   | 'DEAD'
   | 'SOLD'
@@ -27,13 +27,13 @@ export type OfferType = 'PAKAN' | 'SUSU' | 'PUPUK';
 
 export type ChecklistPriority = 'HIGH' | 'MEDIUM' | 'INFO';
 
+// Backend enum values (models/checklist.py ChecklistActionType)
 export type ChecklistActionType =
-  | 'CREATE_FEED_ORDER'
-  | 'CREATE_MILK_OFFER'
-  | 'CREATE_FERTILIZER_OFFER'
-  | 'SEND_REMINDER'
   | 'NAVIGATE'
-  | 'OPEN_PRICE_MODAL';
+  | 'CREATE_PO'
+  | 'CREATE_OFFER'
+  | 'SEND_REMINDER'
+  | 'OPEN_MODAL';
 
 export type NotificationType =
   | 'MILK_REPORT'

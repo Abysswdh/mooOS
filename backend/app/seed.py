@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from app.database import SessionLocal, create_all_tables
 from app.models.user import User, UserRole
 from app.models.member import Member
+from app.models.barn import Barn
 from app.models.cow import Cow, CowStatus, CowType, CowGender
 from app.models.feed import FeedStock
 from app.models.milk import MilkRecord
@@ -34,6 +35,15 @@ def seed_db():
     )
     db.add(admin)
     db.commit()
+
+    print("Seeding barns (Kandang A & B)...")
+    barn_a = Barn(name="Kandang A", location="Blok A", capacity=30, caretaker_name="Abyasa")
+    barn_b = Barn(name="Kandang B", location="Blok B", capacity=30, caretaker_name="Axel")
+    db.add(barn_a)
+    db.add(barn_b)
+    db.commit()
+    db.refresh(barn_a)
+    db.refresh(barn_b)
 
     print("Seeding members...")
     members = []

@@ -9,6 +9,7 @@ import { KPICard } from '@/components/ui/KPICard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatNumber } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
+import { Recycle } from 'lucide-react';
 
 export default function LimbahPage() {
   const { summary, batches, isLoading, error, refetch } = useWaste();
@@ -28,10 +29,10 @@ export default function LimbahPage() {
 
       {summary && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <KPICard title="Total Limbah Mentah" value={`${formatNumber(summary.total_raw_waste_kg)} kg`} icon="Recycle" />
-          <KPICard title="Pupuk Siap Jual" value={`${formatNumber(summary.total_fertilizer_ready_kg)} kg`} icon="Recycle" />
-          <KPICard title="Batch Fermentasi" value={`${summary.batches_fermenting} Batch`} icon="Recycle" />
-          <KPICard title="Batch Siap Jual" value={`${summary.batches_ready} Batch`} icon="Recycle" />
+          <KPICard title="Total Limbah Mentah" value={`${formatNumber(summary.total_raw_waste_kg)} kg`} icon={<Recycle className="h-4 w-4" />} />
+          <KPICard title="Pupuk Siap Jual" value={`${formatNumber(summary.total_fertilizer_ready_kg)} kg`} icon={<Recycle className="h-4 w-4" />} />
+          <KPICard title="Batch Fermentasi" value={`${summary.batches_fermenting} Batch`} icon={<Recycle className="h-4 w-4" />} />
+          <KPICard title="Batch Siap Jual" value={`${summary.batches_ready} Batch`} icon={<Recycle className="h-4 w-4" />} />
         </div>
       )}
 

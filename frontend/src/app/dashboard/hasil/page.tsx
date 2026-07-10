@@ -8,6 +8,7 @@ import { MilkCreateModal } from '@/components/features/MilkCreateModal';
 import { KPICard } from '@/components/ui/KPICard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatNumber } from '@/lib/formatters';
+import { Milk, Beef } from 'lucide-react';
 
 export default function HasilSusuPage() {
   const { summary, records, isLoading, error, refetch } = useMilk();
@@ -27,10 +28,10 @@ export default function HasilSusuPage() {
 
       {summary && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <KPICard title="Produksi Hari Ini" value={`${formatNumber(summary.today_total_liters)} L`} icon="Milk" />
-          <KPICard title="Produksi Kemarin" value={`${formatNumber(summary.yesterday_total_liters)} L`} icon="Milk" />
-          <KPICard title="Total Minggu Ini" value={`${formatNumber(summary.week_total_liters)} L`} icon="Milk" />
-          <KPICard title="Sapi Laktasi" value={`${summary.active_dairy_cows} Ekor`} icon="Beef" />
+          <KPICard title="Produksi Hari Ini" value={`${formatNumber(summary.today_total_liters)} L`} icon={<Milk className="h-4 w-4" />} />
+          <KPICard title="Produksi Kemarin" value={`${formatNumber(summary.yesterday_total_liters)} L`} icon={<Milk className="h-4 w-4" />} />
+          <KPICard title="Total Minggu Ini" value={`${formatNumber(summary.week_total_liters)} L`} icon={<Milk className="h-4 w-4" />} />
+          <KPICard title="Sapi Laktasi" value={`${summary.active_dairy_cows} Ekor`} icon={<Beef className="h-4 w-4" />} />
         </div>
       )}
 

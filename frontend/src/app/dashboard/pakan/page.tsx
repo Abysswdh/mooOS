@@ -9,6 +9,7 @@ import { KPICard } from '@/components/ui/KPICard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatNumber, formatRp } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
+import { Wheat } from 'lucide-react';
 
 export default function PakanPage() {
   const { stock, orders, isLoading, error, refetch } = useFeed();
@@ -28,13 +29,13 @@ export default function PakanPage() {
 
       {stock && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <KPICard title="Sisa Stok Pakan" value={`${formatNumber(stock.current_stock_kg)} kg`} icon="Wheat" />
-          <KPICard title="Konsumsi Harian" value={`${formatNumber(stock.daily_consumption_kg)} kg`} icon="Wheat" />
+          <KPICard title="Sisa Stok Pakan" value={`${formatNumber(stock.current_stock_kg)} kg`} icon={<Wheat className="h-4 w-4" />} />
+          <KPICard title="Konsumsi Harian" value={`${formatNumber(stock.daily_consumption_kg)} kg`} icon={<Wheat className="h-4 w-4" />} />
           <KPICard 
             title="Estimasi Habis" 
             value={`${formatNumber(stock.days_remaining)} Hari`} 
             trend={stock.is_critical ? { value: 0, label: 'Kritis', isPositive: false } : undefined}
-            icon="Wheat" 
+            icon={<Wheat className="h-4 w-4" />} 
           />
         </div>
       )}
