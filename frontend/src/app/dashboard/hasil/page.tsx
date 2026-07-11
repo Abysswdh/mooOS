@@ -4,8 +4,8 @@ import { useMilk } from '@/hooks/useMilk';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { MilkCreateModal } from '@/components/features/MilkCreateModal';
 import { MilkOfferModal } from '@/components/features/MilkOfferModal';
+
 import { KPICard } from '@/components/ui/KPICard';
 import { DataTable, ColumnDef, SortOption } from '@/components/ui/DataTable';
 import { formatNumber } from '@/lib/formatters';
@@ -54,10 +54,8 @@ export default function HasilSusuPage() {
           <h2 className="text-2xl font-bold tracking-tight">Hasil Susu</h2>
           <p className="text-muted-foreground">Pantau produksi susu harian dari semua kandang.</p>
         </div>
-        <div className="flex gap-2">
           <MilkOfferModal />
-          <MilkCreateModal />
-        </div>
+
       </div>
 
       {summary && (

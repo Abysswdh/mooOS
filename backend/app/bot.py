@@ -65,7 +65,16 @@ if bot:
                 except ValueError:
                     bot.send_message(chat_id, "❌ Format QR tidak valid.")
             else:
-                bot.send_message(chat_id, f"Halo {first_name}! Anda telah terdaftar sebagai PJ Kandang.\nGunakan menu /lapor_susu atau /lapor_limbah, atau scan QR sapi.")
+                bot.send_message(chat_id, (
+                    f"Halo {first_name}! \U0001f44b\n"
+                    f"Anda telah terdaftar sebagai PJ Kandang.\n\n"
+                    f"*Perintah tersedia:*\n"
+                    f"\u2022 Scan QR sapi di menu Ternak\n"
+                    f"\u2022 /lapor\\_susu \u2014 lapor produksi susu\n"
+                    f"\u2022 /lapor\\_limbah \u2014 lapor limbah\n"
+                    f"\u2022 /lelang \u2014 cara ikut lelang\n"
+                    f"\u2022 /harga \u2014 lihat sesi harga grup"
+                ), parse_mode="Markdown")
         finally:
             db.close()
 
@@ -88,17 +97,39 @@ if bot:
             liters = float(message.text)
             db = SessionLocal()
             try:
+                cow = db.query(Cow).filter(Cow.id == int(cow_id)).first()
+                cow_code = cow.code if cow else f"#{cow_id}"
+
                 record = MilkRecord(
                     cow_id=int(cow_id),
                     date=datetime.date.today(),
                     liters=liters,
-                    quality="GRADE_A",
-                    milker_id=None
+                    recorded_by=message.from_user.first_name or message.from_user.username or "PJ Kandang",
                 )
                 db.add(record)
                 db.commit()
-                bot.send_message(message.chat.id, f"✅ Berhasil mencatat {liters}L susu untuk sapi ID {cow_id}.")
-                # Notification could be triggered here or via API
+
+                # Create admin dashboard notification
+                from app.models.notification import Notification, NotificationType
+                from app.models.user import User, UserRole
+                admins = db.query(User).filter(User.role == UserRole.ADMIN, User.is_active == True).all()
+                reporter = message.from_user.first_name or message.from_user.username or "PJ Kandang"
+                for admin in admins:
+                    notif = Notification(
+                        user_id=admin.id,
+                        type=NotificationType.MILK_REPORT,
+                        title=f"Produksi susu via Telegram: Sapi {cow_code} — {liters} L",
+                        message=f"Dilaporkan oleh: {reporter} pada {datetime.date.today()}",
+                        read=False,
+                    )
+                    db.add(notif)
+                db.commit()
+
+                bot.send_message(
+                    message.chat.id,
+                    f"✅ Berhasil mencatat {liters}L susu untuk sapi {cow_code}.\n"
+                    f"Stok susu koperasi telah diperbarui."
+                )
             finally:
                 db.close()
         except ValueError:
@@ -179,6 +210,28 @@ if bot:
             )
         bot.send_message(message.chat.id, msg, parse_mode="Markdown")
 
+    @bot.message_handler(commands=['lelang'])
+    def handle_lelang_help(message):
+        """Show bidding commands for buyers and sellers."""
+        msg = (
+            "\U0001f4e2 *Cara Ikut Lelang MooOS*\n\n"
+            "*Buyer Susu* \U0001f95b\n"
+            "Kirim di grup atau chat bot:\n"
+            "`beli susu <harga>` — contoh: `beli susu 7000`\n"
+            "Bot pilih harga *tertinggi*.\n\n"
+            "*Buyer Limbah/Pupuk* \U0001f33f\n"
+            "`beli limbah <harga>` — contoh: `beli limbah 2000`\n"
+            "Bot pilih harga *tertinggi*.\n\n"
+            "*Supplier Pakan* \U0001f33e\n"
+            "`jual pakan <harga>` — contoh: `jual pakan 3500`\n"
+            "Bot pilih harga *termurah*.\n\n"
+            "\u26a0\ufe0f Sistem otomatis memilih penawaran terbaik saat waktu lelang habis.\n"
+            "Anda bisa kirim ulang untuk mengubah penawaran sebelum waktu habis."
+        )
+        bot.send_message(message.chat.id, msg, parse_mode="Markdown")
+
+
+
     @bot.message_handler(func=lambda msg: True)
     def catch_all(message):
         """Catch all messages to print Chat ID for easy setup."""
@@ -194,6 +247,12 @@ if bot:
             handle_price_submission(message)
         elif text.startswith('tawar '):
             handle_auction_bid(message)
+        elif (
+            text.startswith('beli susu ')
+            or text.startswith('beli limbah ')
+            or text.startswith('jual pakan ')
+        ):
+            handle_simple_bid(message)
             
     def handle_auction_bid(message):
         """Handle auction bids e.g. tawar PO-FEED-XXX 3500"""
@@ -269,6 +328,176 @@ if bot:
         except Exception as e:
             print(f"Error handling bid: {e}")
             bot.reply_to(message, "❌ Terjadi kesalahan pada sistem.")
+        finally:
+            db.close()
+
+    def handle_simple_bid(message):
+        """
+        Handle simplified bidding commands from buyers/sellers.
+
+        Supported formats:
+          beli susu <harga>    → Buyer bids on the latest OPEN milk (SUSU) auction
+          beli limbah <harga>  → Buyer bids on the latest OPEN fertilizer (PUPUK) auction
+          jual pakan <harga>   → Supplier bids on the latest OPEN feed (PAKAN) order
+
+        The system automatically finds the most recent active auction — no code needed.
+        """
+        from app.models.auction import AuctionItemType, AuctionBid
+        from app.models.feed import FeedOrder, FeedOrderStatus
+        from app.models.milk_offer import MilkOffer, MilkOfferStatus
+        from app.models.waste import FertilizerOffer, FertilizerOfferStatus
+
+        text = message.text.lower().strip()
+        parts = text.split()
+
+        # Determine command type and extract price
+        if len(parts) < 3:
+            bot.reply_to(
+                message,
+                "❌ Format salah. Contoh:\n"
+                "`beli susu 7000`\n"
+                "`beli limbah 2000`\n"
+                "`jual pakan 3500`",
+                parse_mode="Markdown"
+            )
+            return
+
+        # Parse: "beli susu 7000" → verb="beli", item="susu", price="7000"
+        #        "jual pakan 3500" → verb="jual", item="pakan", price="3500"
+        verb = parts[0]   # beli / jual
+        item = parts[1]   # susu / limbah / pakan
+        price_str = parts[2]
+
+        try:
+            price_val = float(price_str.replace(",", "").replace(".", ""))
+            if price_val <= 0:
+                raise ValueError("Price must be positive")
+        except ValueError:
+            bot.reply_to(message, "❌ Format harga tidak valid. Masukkan angka, contoh: `beli susu 7000`", parse_mode="Markdown")
+            return
+
+        db = SessionLocal()
+        try:
+            item_type = None
+            item_id = None
+            item_code = None
+            role_label = ""      # for confirmation message
+            item_label = ""
+
+            if verb == "beli" and item == "susu":
+                # Find latest OPEN milk offer
+                offer = (
+                    db.query(MilkOffer)
+                    .filter(MilkOffer.status == MilkOfferStatus.OPEN)
+                    .order_by(MilkOffer.created_at.desc())
+                    .first()
+                )
+                if not offer:
+                    bot.reply_to(message, "⚠️ Tidak ada lelang susu yang sedang buka saat ini.")
+                    return
+                item_type = AuctionItemType.SUSU
+                item_id = offer.id
+                item_code = f"OF-MILK-{offer.id}"
+                item_label = f"susu {float(offer.quantity_liters):,.0f} liter"
+                role_label = "Penawaran beli"
+
+            elif verb == "beli" and item == "limbah":
+                # Find latest OPEN fertilizer offer
+                offer = (
+                    db.query(FertilizerOffer)
+                    .filter(FertilizerOffer.status == "OPEN")
+                    .order_by(FertilizerOffer.created_at.desc())
+                    .first()
+                )
+                if not offer:
+                    bot.reply_to(message, "⚠️ Tidak ada lelang limbah/pupuk yang sedang buka saat ini.")
+                    return
+                item_type = AuctionItemType.PUPUK
+                item_id = offer.id
+                item_code = f"OF-FERT-{offer.id}"
+                item_label = f"pupuk {float(offer.quantity_kg):,.0f} kg"
+                role_label = "Penawaran beli"
+
+            elif verb == "jual" and item == "pakan":
+                # Find latest OPEN feed order
+                order = (
+                    db.query(FeedOrder)
+                    .filter(FeedOrder.status == FeedOrderStatus.OPEN)
+                    .order_by(FeedOrder.created_at.desc())
+                    .first()
+                )
+                if not order:
+                    bot.reply_to(message, "⚠️ Tidak ada pesanan pakan yang sedang buka saat ini.")
+                    return
+                item_type = AuctionItemType.PAKAN
+                item_id = order.id
+                item_code = order.po_number
+                item_label = f"pakan {float(order.quantity_kg):,.0f} kg"
+                role_label = "Penawaran jual"
+
+            else:
+                bot.reply_to(
+                    message,
+                    "❌ Perintah tidak dikenali. Gunakan:\n"
+                    "`beli susu <harga>`\n"
+                    "`beli limbah <harga>`\n"
+                    "`jual pakan <harga>`",
+                    parse_mode="Markdown"
+                )
+                return
+
+            # Check for duplicate bid from same user
+            existing_bid = db.query(AuctionBid).filter(
+                AuctionBid.item_type == item_type,
+                AuctionBid.item_id == item_id,
+                AuctionBid.telegram_user_id == str(message.from_user.id)
+            ).first()
+
+            unit = "liter" if item_type == AuctionItemType.SUSU else "kg"
+
+            if existing_bid:
+                # Update the existing bid instead of creating a duplicate
+                old_price = float(existing_bid.price_per_unit)
+                existing_bid.price_per_unit = price_val
+                db.commit()
+                bot.reply_to(
+                    message,
+                    f"🔄 *Penawaran Diperbarui*\n\n"
+                    f"Item: {item_label}\n"
+                    f"Harga lama: Rp{old_price:,.0f}/{unit}\n"
+                    f"Harga baru: Rp{price_val:,.0f}/{unit}\n\n"
+                    f"Mohon tunggu hingga waktu lelang habis.",
+                    parse_mode="Markdown"
+                )
+                return
+
+            # Save new bid
+            bid = AuctionBid(
+                item_type=item_type,
+                item_id=item_id,
+                item_code=item_code,
+                telegram_user_id=str(message.from_user.id),
+                telegram_username=message.from_user.username,
+                price_per_unit=price_val
+            )
+            db.add(bid)
+            db.commit()
+
+            bot.reply_to(
+                message,
+                f"✅ *{role_label} Berhasil Dicatat!*\n\n"
+                f"Item: {item_label}\n"
+                f"Harga: Rp{price_val:,.0f}/{unit}\n\n"
+                f"⏳ Mohon tunggu hingga waktu lelang habis.\n"
+                f"Sistem akan otomatis memilih penawaran terbaik.",
+                parse_mode="Markdown"
+            )
+
+        except Exception as e:
+            print(f"Error handling simple bid: {e}")
+            import traceback
+            traceback.print_exc()
+            bot.reply_to(message, "❌ Terjadi kesalahan pada sistem. Coba lagi.")
         finally:
             db.close()
 
