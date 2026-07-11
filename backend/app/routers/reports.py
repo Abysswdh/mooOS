@@ -15,7 +15,27 @@ from app.models.user import User
 from app.dependencies import get_current_user
 from pydantic import BaseModel
 from typing import Optional
+from app.models.member import Member
 
+class PieData(BaseModel):
+    name: str
+    value: float
+    color: Optional[str] = None
+
+class FinancialSummaryResponse(BaseModel):
+    income: list[PieData]
+    expenses: list[PieData]
+    net_profit: float
+
+class ShuDistributionItem(BaseModel):
+    member_name: str
+    total_cows: int
+    total_milk_contribution_liters: float
+    shu_amount: float
+
+class ShuDistributionResponse(BaseModel):
+    ratios: dict[str, int]
+    distribution: list[ShuDistributionItem]
 
 class DailyReportResponse(BaseModel):
     date: date_type
@@ -113,4 +133,89 @@ def get_daily_report(
         susu_price_per_liter=susu_price or None,
         pakan_price_per_kg=pakan_price or None,
         pupuk_price_per_kg=pupuk_price or None,
+    )
+
+@router.get("/financial-summary", response_model=FinancialSummaryResponse)
+def get_financial_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    total_milk = float(db.query(func.sum(MilkRecord.liters)).scalar() or 0.0)
+    milk_rev = total_milk * 7000.0
+
+    fert = float(
+        db.query(func.sum(WasteBatch.estimated_fertilizer_kg))
+        .filter(WasteBatch.status == WasteBatchStatus.SOLD)
+        .scalar() or 0.0
+    )
+    fert_rev = fert * 1500.0
+
+    active_cows = db.query(Cow).filter(Cow.status == CowStatus.AVAILABLE).count()
+    feed_exp = active_cows * 10.0 * 30 * 5000.0
+    salary_exp = 10000000.0
+    maintenance_exp = 3000000.0
+    utilities_exp = 2000000.0
+
+    net_profit = (milk_rev + fert_rev) - (feed_exp + salary_exp + maintenance_exp + utilities_exp)
+
+    return FinancialSummaryResponse(
+        income=[
+            PieData(name="Penjualan Susu", value=milk_rev, color="#3b82f6"),
+            PieData(name="Penjualan Pupuk", value=fert_rev, color="#10b981"),
+        ],
+        expenses=[
+            PieData(name="Beli Pakan", value=feed_exp, color="#f59e0b"),
+            PieData(name="Biaya Gaji", value=salary_exp, color="#ef4444"),
+            PieData(name="Perawatan Kandang", value=maintenance_exp, color="#8b5cf6"),
+            PieData(name="Listrik & Fasilitas", value=utilities_exp, color="#ec4899"),
+        ],
+        net_profit=net_profit
+    )
+
+
+@router.get("/shu-distribution", response_model=ShuDistributionResponse)
+def get_shu_distribution(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    members = db.query(Member).filter(Member.is_active == True).all()
+
+    total_milk = float(db.query(func.sum(MilkRecord.liters)).scalar() or 0.0)
+    active_cows = db.query(Cow).filter(Cow.status == CowStatus.AVAILABLE).count()
+    
+    net_profit = (total_milk * 7000.0) - (active_cows * 10.0 * 30 * 5000.0) - 15000000.0
+    member_pool = max(net_profit * 0.7, 0)
+
+    total_milk_factor = total_milk if total_milk > 0 else 1.0
+
+    distribution = []
+    for m in members:
+        m_cows = db.query(Cow).filter(Cow.owner_id == m.id).all()
+        m_cow_ids = [c.id for c in m_cows]
+
+        m_milk = 0.0
+        if m_cow_ids:
+            m_milk = float(
+                db.query(func.sum(MilkRecord.liters))
+                .filter(MilkRecord.cow_id.in_(m_cow_ids))
+                .scalar() or 0.0
+            )
+
+        proportion = m_milk / total_milk_factor
+        shu = member_pool * proportion
+
+        distribution.append(
+            ShuDistributionItem(
+                member_name=m.name,
+                total_cows=len(m_cow_ids),
+                total_milk_contribution_liters=m_milk,
+                shu_amount=shu
+            )
+        )
+
+    distribution.sort(key=lambda x: x.shu_amount, reverse=True)
+
+    return ShuDistributionResponse(
+        ratios={"koperasi_cut_percent": 30, "member_cut_percent": 70},
+        distribution=distribution
     )
