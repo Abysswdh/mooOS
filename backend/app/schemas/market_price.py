@@ -22,6 +22,8 @@ class MarketPriceResponse(BaseModel):
     price_per_unit: float
     unit: str
     source: str
+    supplier_telegram_id: str | None = None
+    supplier_name: str | None = None
     created_at: datetime
 
 

@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     TELEGRAM_GROUP_PAKAN: str = ""
     TELEGRAM_GROUP_SUSU: str = ""
     TELEGRAM_GROUP_PUPUK: str = ""
+    TELEGRAM_GROUP_ADMIN: str = ""
 
     # ── CORS ──────────────────────────────────────────────────
     CORS_ORIGINS: list[str] = [

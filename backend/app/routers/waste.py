@@ -102,6 +102,7 @@ def create_fertilizer_offer(
         quantity_kg=offer_in.quantity_kg,
         price_per_kg=offer_in.price_per_kg,
         total_price=total_price,
+        min_order_kg=offer_in.min_order_kg,
         status=FertilizerOfferStatus.OPEN,
         expires_at=expires_at
     )
@@ -117,12 +118,16 @@ def create_fertilizer_offer(
         if bot and settings.TELEGRAM_GROUP_PUPUK:
             offer_code = f"OF-FERT-{new_offer.id}"
             msg = (
-                f"📢 *Lelang Penjualan Pupuk*\n\n"
-                f"MooOS menjual {offer_in.quantity_kg} kg pupuk kompos.\n"
-                f"Harga dasar/min: Rp{offer_in.price_per_kg:,.0f}/kg.\n"
-                f"Waktu lelang: {offer_in.duration_minutes} menit.\n\n"
-                f"Kirim penawaran Anda dengan format:\n"
-                f"`tawar {offer_code} <harga_per_kg>`"
+                f"📢 *Lelang Penjualan Pupuk!*\n\n"
+                f"🌱 Stok tersedia: *{offer_in.quantity_kg:,.0f} kg* pupuk\n"
+                f"💰 Harga dasar: Rp{offer_in.price_per_kg:,.0f}/kg\n"
+                f"📦 Min pembelian: {offer_in.min_order_kg:,.0f} kg\n"
+                f"⏱ Waktu lelang: *{offer_in.duration_minutes} menit*\n\n"
+                f"Kirim penawaran dengan cara:\n"
+                f"`beli limbah <harga>`\n\n"
+                f"Contoh:\n"
+                f"`beli limbah 5000`\n\n"
+                f"Bot akan memilih harga *tertinggi* saat waktu lelang habis."
             )
             try:
                 bot.send_message(settings.TELEGRAM_GROUP_PUPUK, msg, parse_mode="Markdown")

@@ -57,13 +57,31 @@ def get_today_prices(
     prices = db.query(DailyMarketPrice).filter(DailyMarketPrice.date == today).all()
     
     summary = TodayPricesSummary(date=today, is_auto_generated=False)
+    
+    # We might have multiple prices per item_type (one per supplier).
+    # We want MIN for PAKAN, MAX for SUSU and PUPUK
+    best_pakan = None
+    best_susu = None
+    best_pupuk = None
+    
     for p in prices:
-        resp = MarketPriceResponse.model_validate(p)
         if p.item_type == MarketItemType.PAKAN:
-            summary.pakan = resp
+            # For PAKAN, we require a telegram supplier for POs
+            if p.source.name == "TELEGRAM":
+                if best_pakan is None or p.price_per_unit < best_pakan.price_per_unit:
+                    best_pakan = p
         elif p.item_type == MarketItemType.SUSU:
-            summary.susu = resp
+            if best_susu is None or p.price_per_unit > best_susu.price_per_unit:
+                best_susu = p
         elif p.item_type == MarketItemType.PUPUK:
-            summary.pupuk = resp
+            if best_pupuk is None or p.price_per_unit > best_pupuk.price_per_unit:
+                best_pupuk = p
+                
+    if best_pakan:
+        summary.pakan = MarketPriceResponse.model_validate(best_pakan)
+    if best_susu:
+        summary.susu = MarketPriceResponse.model_validate(best_susu)
+    if best_pupuk:
+        summary.pupuk = MarketPriceResponse.model_validate(best_pupuk)
             
     return summary

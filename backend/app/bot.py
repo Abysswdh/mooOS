@@ -80,11 +80,63 @@ if bot:
 
     @bot.message_handler(commands=['lapor_susu'])
     def handle_lapor_susu_cmd(message):
-        bot.send_message(message.chat.id, "Silakan masukkan ID sapi atau scan QR terlebih dahulu.")
+        parts = message.text.split(' ', 1)
+        if len(parts) > 1:
+            process_cow_input_for_susu(message, parts[1].strip())
+        else:
+            msg = bot.send_message(message.chat.id, "Silakan ketik Kode Sapi atau ID Sapi yang ingin dilaporkan susunya:")
+            bot.register_next_step_handler(msg, process_cow_input_for_susu_step)
+
+    def process_cow_input_for_susu_step(message):
+        process_cow_input_for_susu(message, message.text.strip())
+
+    def process_cow_input_for_susu(message, cow_input):
+        db = SessionLocal()
+        try:
+            if cow_input.isdigit():
+                cow = db.query(Cow).filter(Cow.id == int(cow_input)).first()
+            else:
+                cow = db.query(Cow).filter(Cow.code == cow_input).first()
+                
+            if cow:
+                if (hasattr(cow.cow_type, 'name') and cow.cow_type.name != "DAIRY") and (isinstance(cow.cow_type, str) and cow.cow_type != "DAIRY"):
+                    bot.send_message(message.chat.id, "❌ Sapi ini bukan sapi perah (DAIRY).")
+                    return
+
+                msg = bot.send_message(message.chat.id, f"Berapa liter susu yang dihasilkan sapi {cow.code}?")
+                bot.register_next_step_handler(msg, process_lapor_susu, cow.id)
+            else:
+                bot.send_message(message.chat.id, "❌ Sapi tidak ditemukan. Silakan cek kembali Kode/ID Sapi.")
+        finally:
+            db.close()
 
     @bot.message_handler(commands=['lapor_limbah'])
     def handle_lapor_limbah_cmd(message):
-        bot.send_message(message.chat.id, "Silakan masukkan ID sapi atau scan QR terlebih dahulu.")
+        parts = message.text.split(' ', 1)
+        if len(parts) > 1:
+            process_cow_input_for_limbah(message, parts[1].strip())
+        else:
+            msg = bot.send_message(message.chat.id, "Silakan ketik Kode Sapi atau ID Sapi yang ingin dilaporkan limbahnya:")
+            bot.register_next_step_handler(msg, process_cow_input_for_limbah_step)
+
+    def process_cow_input_for_limbah_step(message):
+        process_cow_input_for_limbah(message, message.text.strip())
+
+    def process_cow_input_for_limbah(message, cow_input):
+        db = SessionLocal()
+        try:
+            if cow_input.isdigit():
+                cow = db.query(Cow).filter(Cow.id == int(cow_input)).first()
+            else:
+                cow = db.query(Cow).filter(Cow.code == cow_input).first()
+                
+            if cow:
+                msg = bot.send_message(message.chat.id, f"Berapa kg limbah yang dihasilkan dari kandang sapi {cow.code}?")
+                bot.register_next_step_handler(msg, process_lapor_limbah, cow.id)
+            else:
+                bot.send_message(message.chat.id, "❌ Sapi tidak ditemukan. Silakan cek kembali Kode/ID Sapi.")
+        finally:
+            db.close()
 
     @bot.callback_query_handler(func=lambda call: call.data.startswith('lapor_susu_'))
     def callback_lapor_susu(call):
@@ -250,9 +302,153 @@ if bot:
         elif (
             text.startswith('beli susu ')
             or text.startswith('beli limbah ')
+            or text.startswith('beli pupuk ')
             or text.startswith('jual pakan ')
         ):
             handle_simple_bid(message)
+        elif text == "1" or text == "2":
+            handle_po_response(message, text)
+
+    def handle_po_response(message, response):
+        telegram_user_id = str(message.from_user.id)
+        db = SessionLocal()
+        try:
+            from app.models.feed import FeedOrder, FeedOrderRecipient, FeedOrderStatus
+            
+            # Find the recipient record that hasn't responded yet, for an OPEN order
+            recipient = db.query(FeedOrderRecipient).join(FeedOrder).filter(
+                FeedOrderRecipient.telegram_user_id == telegram_user_id,
+                FeedOrderRecipient.responded == False,
+                FeedOrder.status == FeedOrderStatus.OPEN
+            ).order_by(FeedOrderRecipient.id.desc()).first()
+            
+            if not recipient:
+                bot.reply_to(message, "ℹ️ Tidak ada Purchase Order (PO) yang menunggu konfirmasi Anda.")
+                return
+                
+            recipient.responded = True
+            recipient.response = "ACCEPT" if response == "1" else "REJECT"
+            import datetime as dt
+            recipient.responded_at = dt.datetime.now()
+            
+            order = recipient.order
+            
+            if response == "1":
+                order.status = FeedOrderStatus.CONFIRMED
+                order.accepted_by = message.from_user.first_name or message.from_user.username
+                order.accepted_price_per_kg = order.max_price_per_kg
+                order.confirmed_at = dt.datetime.now()
+                db.commit()
+                db.refresh(order)
+                
+                bot.reply_to(message, "✅ Terima kasih! PO telah disetujui. Invoice sedang dibuat...")
+                
+                # Capture order values BEFORE any potential detach
+                po_number = order.po_number
+                accepted_by = order.accepted_by
+                feed_type = order.feed_type
+                quantity_kg = float(order.quantity_kg)
+                price_per_kg = float(order.max_price_per_kg)
+                total_price = float(order.total_max_price)
+                
+                # Generate Invoice
+                from app.services.invoice import generate_supplier_invoice
+                pdf_path = generate_supplier_invoice(order, recipient)
+                
+                # Notify Admin (if configured)
+                settings = get_settings()
+                
+                # We will reuse the same caption for both Supplier and Admin
+                invoice_msg = (
+                    f"📄 *Invoice Purchase Order*\n\n"
+                    f"Supplier: {accepted_by}\n"
+                    f"Jenis: {feed_type}\n"
+                    f"Jumlah: {quantity_kg:,.0f} kg\n"
+                    f"Harga: Rp{price_per_kg:,.0f}/kg\n"
+                    f"Total: Rp{total_price:,.0f}\n"
+                    f"Status: Menunggu Pembayaran\n\n"
+                    f"Silakan simpan invoice ini sebagai bukti pemesanan."
+                )
+                
+                # Send to Supplier
+                with open(pdf_path, 'rb') as pdf_file:
+                    bot.send_document(message.chat.id, pdf_file, caption=invoice_msg, parse_mode="Markdown")
+                
+                # Send to Admin Group
+                if settings.TELEGRAM_GROUP_ADMIN:
+                    with open(pdf_path, 'rb') as pdf_file:
+                        bot.send_document(settings.TELEGRAM_GROUP_ADMIN, pdf_file, caption=f"[Tembusan Admin]\n{invoice_msg}", parse_mode="Markdown")
+            
+            else:
+                db.commit()
+                bot.reply_to(message, "❌ Anda telah menolak PO ini.")
+                
+                # Fallback logic: Find next cheapest supplier
+                from app.models.market_price import DailyMarketPrice, MarketItemType
+                today = dt.date.today()
+                
+                # Get all suppliers who offered Pakan today, ordered by price ASC
+                all_prices = db.query(DailyMarketPrice).filter(
+                    DailyMarketPrice.date == today,
+                    DailyMarketPrice.item_type == MarketItemType.PAKAN
+                ).order_by(DailyMarketPrice.price_per_unit.asc()).all()
+                
+                # Get telegram IDs of those who already received this PO
+                contacted_ids = [r.telegram_user_id for r in order.recipients]
+                
+                next_supplier = None
+                for price_record in all_prices:
+                    if price_record.supplier_telegram_id and price_record.supplier_telegram_id not in contacted_ids:
+                        next_supplier = price_record
+                        break
+                        
+                if next_supplier:
+                    # Update order max_price to match the new supplier's price
+                    order.max_price_per_kg = float(next_supplier.price_per_unit)
+                    order.total_max_price = order.quantity_kg * order.max_price_per_kg
+                    
+                    new_recipient = FeedOrderRecipient(
+                        order_id=order.id,
+                        telegram_user_id=next_supplier.supplier_telegram_id
+                    )
+                    db.add(new_recipient)
+                    db.commit()
+                    
+                    # Send PO
+                    msg = (
+                        f"📦 *Purchase Order Baru*\n\n"
+                        f"Pembeli: Koperasi Harapan Baru\n"
+                        f"Jenis Pakan: {order.feed_type}\n"
+                        f"Jumlah: {order.quantity_kg:,.0f} kg\n"
+                        f"Harga: Rp{order.max_price_per_kg:,.0f}/kg\n"
+                        f"Total: Rp{order.total_max_price:,.0f}\n\n"
+                        f"Balas:\n"
+                        f"`1` = Terima PO\n"
+                        f"`2` = Tolak PO"
+                    )
+                    try:
+                        bot.send_message(next_supplier.supplier_telegram_id, msg, parse_mode="Markdown")
+                    except Exception as e:
+                        print(f"Failed to send fallback PO: {e}")
+                else:
+                    # No more suppliers
+                    order.status = FeedOrderStatus.REJECTED
+                    db.commit()
+                    settings = get_settings()
+                    if settings.TELEGRAM_GROUP_ADMIN:
+                        admin_msg = (
+                            f"❌ *Semua supplier menolak Purchase Order*\n\n"
+                            f"PO Number: {order.po_number}\n"
+                            f"Silakan lakukan permintaan harga ulang atau buat PO baru."
+                        )
+                        bot.send_message(settings.TELEGRAM_GROUP_ADMIN, admin_msg, parse_mode="Markdown")
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            bot.reply_to(message, f"❌ Terjadi kesalahan sistem: {str(e)}")
+        finally:
+            db.close()
             
     def handle_auction_bid(message):
         """Handle auction bids e.g. tawar PO-FEED-XXX 3500"""
@@ -365,7 +561,7 @@ if bot:
         # Parse: "beli susu 7000" → verb="beli", item="susu", price="7000"
         #        "jual pakan 3500" → verb="jual", item="pakan", price="3500"
         verb = parts[0]   # beli / jual
-        item = parts[1]   # susu / limbah / pakan
+        item = parts[1]   # susu / limbah / pupuk / pakan
         price_str = parts[2]
 
         try:
@@ -401,7 +597,7 @@ if bot:
                 item_label = f"susu {float(offer.quantity_liters):,.0f} liter"
                 role_label = "Penawaran beli"
 
-            elif verb == "beli" and item == "limbah":
+            elif verb == "beli" and (item == "limbah" or item == "pupuk"):
                 # Find latest OPEN fertilizer offer
                 offer = (
                     db.query(FertilizerOffer)
@@ -485,7 +681,7 @@ if bot:
 
             bot.reply_to(
                 message,
-                f"✅ *{role_label} Berhasil Dicatat!*\n\n"
+                f"✅ {role_label} berhasil dicatat!\n\n"
                 f"Item: {item_label}\n"
                 f"Harga: Rp{price_val:,.0f}/{unit}\n\n"
                 f"⏳ Mohon tunggu hingga waktu lelang habis.\n"
@@ -535,10 +731,14 @@ if bot:
 
         db = SessionLocal()
         try:
+            telegram_user_id = str(message.from_user.id)
+            supplier_name = message.from_user.first_name or message.from_user.username
+            
             existing = db.query(DailyMarketPrice).filter(
                 DailyMarketPrice.date == dt.date.today(),
                 DailyMarketPrice.item_type == item_type,
-                DailyMarketPrice.source == PriceSource.TELEGRAM
+                DailyMarketPrice.source == PriceSource.TELEGRAM,
+                DailyMarketPrice.supplier_telegram_id == telegram_user_id
             ).first()
 
             unit = "liter" if item_type == "SUSU" else "kg"
@@ -560,7 +760,9 @@ if bot:
                     item_type=item_type,
                     price_per_unit=price_val,
                     unit=unit,
-                    source=PriceSource.TELEGRAM
+                    source=PriceSource.TELEGRAM,
+                    supplier_telegram_id=telegram_user_id,
+                    supplier_name=supplier_name
                 )
                 db.add(new_price)
                 db.commit()

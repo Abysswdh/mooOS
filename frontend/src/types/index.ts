@@ -409,6 +409,7 @@ export interface FeedOrderCreateInput {
   quantity_kg: number;
   feed_type?: string;
   max_price_per_kg: number;
+  supplier_telegram_id?: string | null;
 }
 
 /** POST /milk/offers — backend/app/schemas/milk.py → MilkOfferCreate */

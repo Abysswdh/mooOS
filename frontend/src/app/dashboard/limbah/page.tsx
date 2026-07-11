@@ -4,7 +4,6 @@ import { useWaste } from '@/hooks/useWaste';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { WasteCreateModal } from '@/components/features/WasteCreateModal';
 import { FertilizerOfferModal } from '@/components/features/FertilizerOfferModal';
 import { KPICard } from '@/components/ui/KPICard';
 import { DataTable, ColumnDef, SortOption } from '@/components/ui/DataTable';
@@ -65,7 +64,6 @@ export default function LimbahPage() {
         </div>
         <div className="flex gap-2">
           <FertilizerOfferModal />
-          <WasteCreateModal />
         </div>
       </div>
 

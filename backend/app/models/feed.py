@@ -12,6 +12,7 @@ from app.database import Base
 class FeedOrderStatus(str, enum.Enum):
     OPEN = "OPEN"
     CONFIRMED = "CONFIRMED"
+    PAID = "PAID"
     REJECTED = "REJECTED"
     EXPIRED = "EXPIRED"
     DELIVERED = "DELIVERED"

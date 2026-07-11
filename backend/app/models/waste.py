@@ -59,8 +59,9 @@ class FertilizerOffer(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     quantity_kg: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
-    price_per_kg: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
-    total_price: Mapped[float] = mapped_column(Numeric(14, 2), nullable=False)
+    price_per_kg: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    total_price: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    min_order_kg: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=1.0)
     status: Mapped[FertilizerOfferStatus] = mapped_column(
         Enum(FertilizerOfferStatus, name="fertilizer_offer_status", native_enum=False),
         nullable=False,

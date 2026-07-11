@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -30,8 +30,8 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { apiPost } from '@/lib/api';
-import { toastSuccess, toastError } from '@/lib/notify';
+import { apiPost, apiGet } from '@/lib/api';
+import { toastSuccess, toastError, toastInfo } from '@/lib/notify';
 import { FeedOrderCreateInput } from '@/types';
 import { Plus } from 'lucide-react';
 
@@ -39,32 +39,56 @@ const feedOrderSchema = z.object({
   quantity_kg: z.coerce.number().min(1, 'Kuantitas harus lebih dari 0'),
   feed_type: z.string().min(1, 'Jenis pakan wajib dipilih'),
   max_price_per_kg: z.coerce.number().min(1, 'Harga maksimal harus lebih dari 0'),
-  duration_minutes: z.coerce.number().min(1, 'Minimal 1 menit').max(60, 'Maksimal 60 menit'),
 });
 
 export function FeedOrderModal() {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [supplierName, setSupplierName] = useState('-');
+  const [supplierTelegramId, setSupplierTelegramId] = useState('');
 
   const form = useForm<z.infer<typeof feedOrderSchema>>({
-    // @ts-ignore
     resolver: zodResolver(feedOrderSchema),
     defaultValues: {
       quantity_kg: 500,
       feed_type: 'Konsentrat',
-      max_price_per_kg: 5000,
-      duration_minutes: 5,
+      max_price_per_kg: 0,
     },
   });
 
+  const fetchBestPrice = async () => {
+    try {
+      const data = await apiGet('/prices/today');
+      if (data && data.pakan && data.pakan.price_per_unit) {
+        form.setValue('max_price_per_kg', data.pakan.price_per_unit);
+        setSupplierName(data.pakan.supplier_name || 'Tidak diketahui');
+        setSupplierTelegramId(data.pakan.supplier_telegram_id || '');
+      } else {
+        toastInfo('Belum ada harga pasar pakan hari ini.');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      fetchBestPrice();
+    }
+  }, [open]);
+
   const onSubmit = async (values: z.infer<typeof feedOrderSchema>) => {
+    if (!supplierTelegramId) {
+      toastError('Tidak dapat membuat PO: Tidak ada supplier dari Harga Pasar hari ini.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       const payload: FeedOrderCreateInput = {
         quantity_kg: values.quantity_kg,
         feed_type: values.feed_type,
         max_price_per_kg: values.max_price_per_kg,
-        duration_minutes: values.duration_minutes,
+        supplier_telegram_id: supplierTelegramId,
       };
 
       await apiPost('/feed/orders', payload);
@@ -74,8 +98,7 @@ export function FeedOrderModal() {
       form.reset({
         quantity_kg: 500,
         feed_type: 'Konsentrat',
-        max_price_per_kg: 5000,
-        duration_minutes: 5,
+        max_price_per_kg: 0,
       });
       
       // refresh data
@@ -89,18 +112,26 @@ export function FeedOrderModal() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}>
-        <Plus className="mr-2 h-4 w-4" /> Beli Pakan
+      <DialogTrigger asChild>
+        <Button><Plus className="mr-2 h-4 w-4" /> Beli Pakan</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Buat PO Pembelian Pakan</DialogTitle>
           <DialogDescription>
-            Kirim permintaan pembelian pakan. Notifikasi akan masuk ke grup supplier di Telegram (Siapa Cepat Dia Dapat).
+            Sistem otomatis menggunakan harga Pakan termurah yang tersimpan di Harga Pasar hari ini. PO akan dikirimkan langsung ke supplier terkait.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            
+            <div className="space-y-2 mb-4">
+              <FormLabel>Supplier Termurah</FormLabel>
+              <div className="p-3 bg-emerald-50 text-emerald-900 rounded-md border border-emerald-200 text-sm font-medium">
+                {supplierName}
+              </div>
+            </div>
+
             <FormField
               control={form.control}
               name="feed_type"
@@ -133,7 +164,7 @@ export function FeedOrderModal() {
               name="quantity_kg"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Kuantitas (kg) *</FormLabel>
+                  <FormLabel>Kuantitas Pembelian (kg) *</FormLabel>
                   <FormControl>
                     <Input type="number" {...field} />
                   </FormControl>
@@ -147,26 +178,12 @@ export function FeedOrderModal() {
               name="max_price_per_kg"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Harga Maksimal (per kg) *</FormLabel>
+                  <FormLabel>Harga (per kg) *</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <span className="absolute left-3 top-2.5 text-muted-foreground">Rp</span>
-                      <Input type="number" className="pl-9" {...field} />
+                      <Input type="number" className="pl-9 bg-muted" readOnly {...field} />
                     </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="duration_minutes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Durasi Lelang (menit) *</FormLabel>
-                  <FormControl>
-                    <Input type="number" min="1" max="60" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -174,11 +191,11 @@ export function FeedOrderModal() {
             />
             
             <div className="p-3 bg-muted rounded-md text-sm text-muted-foreground">
-              Total Estimasi Maksimal: <strong>Rp {((form.watch('quantity_kg') || 0) * (form.watch('max_price_per_kg') || 0)).toLocaleString('id-ID')}</strong>
+              Total Tagihan: <strong>Rp {((form.watch('quantity_kg') || 0) * (form.watch('max_price_per_kg') || 0)).toLocaleString('id-ID')}</strong>
             </div>
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Mengirim...' : 'Kirim PO ke Supplier'}
+            <Button type="submit" className="w-full" disabled={isSubmitting || !supplierTelegramId}>
+              {isSubmitting ? 'Mengirim PO...' : 'Kirim PO ke Supplier'}
             </Button>
           </form>
         </Form>

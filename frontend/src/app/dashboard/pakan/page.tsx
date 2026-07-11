@@ -12,6 +12,9 @@ import { DataTable, ColumnDef, SortOption } from '@/components/ui/DataTable';
 import { formatNumber, formatRp } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
 import { Wheat } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { apiPost } from '@/lib/api';
+import { toastSuccess, toastError } from '@/lib/notify';
 import type { FeedOrder } from '@/types';
 
 export default function PakanPage() {
@@ -20,6 +23,26 @@ export default function PakanPage() {
 
   if (isLoading) return <LoadingSpinner />;
   if (error) return <ErrorState message={error} onRetry={refetch} />;
+
+  const handlePay = async (id: number) => {
+    try {
+      await apiPost(`/feed/orders/${id}/pay`, {});
+      toastSuccess('Status PO berhasil diubah menjadi DIBAYAR');
+      refetch();
+    } catch (e: any) {
+      toastError(e.message || 'Gagal mengubah status');
+    }
+  };
+
+  const handleDeliver = async (id: number) => {
+    try {
+      await apiPost(`/feed/orders/${id}/deliver`, {});
+      toastSuccess('Barang diterima. Stok pakan bertambah!');
+      refetch();
+    } catch (e: any) {
+      toastError(e.message || 'Gagal mengubah status');
+    }
+  };
 
   const columns: ColumnDef<FeedOrder>[] = [
     { 
@@ -43,11 +66,36 @@ export default function PakanPage() {
     },
     { 
       header: 'Status', 
-      cell: (order) => (
-        <Badge variant={order.status === 'ACCEPTED' ? 'default' : 'outline'}>{order.status}</Badge>
-      ),
+      cell: (order) => {
+        let variant = 'outline';
+        if (order.status === 'CONFIRMED' || order.status === 'PAID' || order.status === 'DELIVERED') variant = 'default';
+        else if (order.status === 'REJECTED' || order.status === 'EXPIRED') variant = 'destructive';
+        
+        return <Badge variant={variant as any}>{order.status}</Badge>;
+      },
       align: 'center'
     },
+    {
+      header: 'Aksi',
+      cell: (order) => {
+        if (order.status === 'CONFIRMED') {
+          return (
+            <Button size="sm" onClick={() => handlePay(order.id)}>
+              Tandai Dibayar
+            </Button>
+          );
+        }
+        if (order.status === 'PAID') {
+          return (
+            <Button size="sm" onClick={() => handleDeliver(order.id)}>
+              Barang Diterima
+            </Button>
+          );
+        }
+        return <span className="text-muted-foreground">-</span>;
+      },
+      align: 'right'
+    }
   ];
 
   const sortOptions: SortOption<FeedOrder>[] = [

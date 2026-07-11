@@ -143,6 +143,30 @@ def accept_order(db, item_type: AuctionItemType, item_id: int, winning_bid: Auct
             offer.confirmed_at = now
             obj = offer
 
+            from app.models.waste import WasteBatch, WasteBatchStatus
+            qty_to_deduct = float(offer.quantity_kg)
+            ready_batches = db.query(WasteBatch).filter(WasteBatch.status == WasteBatchStatus.READY).order_by(WasteBatch.created_at.asc()).all()
+            
+            for batch in ready_batches:
+                if qty_to_deduct <= 0:
+                    break
+                batch_qty = float(batch.estimated_fertilizer_kg)
+                if batch_qty <= qty_to_deduct:
+                    batch.status = WasteBatchStatus.SOLD
+                    qty_to_deduct -= batch_qty
+                else:
+                    batch.estimated_fertilizer_kg = batch_qty - qty_to_deduct
+                    sold_batch = WasteBatch(
+                        barn_id=batch.barn_id,
+                        batch_code=f"{batch.batch_code}-SOLD",
+                        raw_waste_kg=0,
+                        estimated_fertilizer_kg=qty_to_deduct,
+                        status=WasteBatchStatus.SOLD,
+                        created_at=now
+                    )
+                    db.add(sold_batch)
+                    qty_to_deduct = 0
+
     return obj
 
 
@@ -427,7 +451,7 @@ def announce_winner_to_group(bid: AuctionBid, item_type: AuctionItemType, offer_
         msg = (
             f"✅ *Penjualan pupuk berhasil.*\n\n"
             f"Pembeli: {winner_name}\n"
-            f"Volume: {quantity:,.2f} {unit}\n"
+            f"Jumlah: {quantity:,.0f} {unit}\n"
             f"Harga: Rp{price:,.0f}/{unit}\n"
             f"Total: Rp{total:,.0f}\n\n"
             f"Invoice detail telah dikirimkan via Japri ke pemenang."

@@ -39,6 +39,7 @@ class WasteSummaryResponse(BaseModel):
 class FertilizerOfferCreate(BaseModel):
     quantity_kg: float
     price_per_kg: float
+    min_order_kg: float
     duration_minutes: int | None = None
 
 
@@ -49,6 +50,7 @@ class FertilizerOfferResponse(BaseModel):
     quantity_kg: float
     price_per_kg: float
     total_price: float
+    min_order_kg: float
     status: str
     accepted_by: str | None
     notes: str | None
