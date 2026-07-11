@@ -36,10 +36,25 @@ def create_milk_record(
         liters=record_in.liters,
         recorded_by=current_user.name,
     )
-    # assuming we just use created_at for it.
     db.add(new_record)
     db.commit()
     db.refresh(new_record)
+
+    # Create a dashboard notification for all admins
+    from app.models.notification import Notification, NotificationType
+    from app.models.user import UserRole
+    admins = db.query(User).filter(User.role == UserRole.ADMIN, User.is_active == True).all()
+    for admin in admins:
+        notif = Notification(
+            user_id=admin.id,
+            type=NotificationType.MILK_REPORT,
+            title=f"Produksi susu dicatat: Sapi #{cow.id} — {record_in.liters} L",
+            message=f"Dicatat oleh: {current_user.name} pada {record_in.date}",
+            read=False,
+        )
+        db.add(notif)
+    db.commit()
+
     return new_record
 
 
@@ -145,13 +160,15 @@ def create_milk_offer(
         if bot and settings.TELEGRAM_GROUP_SUSU:
             offer_code = f"OF-MILK-{new_offer.id}"
             msg = (
-                f"📢 *Lelang Penjualan Susu*\n\n"
-                f"MooOS menjual {offer_in.quantity_liters} liter susu segar.\n"
-                f"Harga dasar/min: Rp{offer_in.price_per_liter:,.0f}/liter.\n"
-                f"Min pembelian: {offer_in.min_order_liters} liter.\n"
-                f"Waktu lelang: {offer_in.duration_minutes} menit.\n\n"
-                f"Kirim penawaran Anda dengan format:\n"
-                f"`tawar {offer_code} <harga_per_liter>`"
+                f"\U0001f4e2 *Lelang Penjualan Susu!*\n\n"
+                f"\U0001f95b Stok tersedia: *{offer_in.quantity_liters:,.0f} liter* susu segar\n"
+                f"\U0001f4b0 Harga dasar: Rp{offer_in.price_per_liter:,.0f}/liter\n"
+                f"\U0001f4e6 Min pembelian: {offer_in.min_order_liters:,.0f} liter\n"
+                f"\u23f1 Waktu lelang: *{offer_in.duration_minutes} menit*\n\n"
+                f"Kirim penawaran dengan cara:\n"
+                f"`beli susu <harga>`\n"
+                f"Contoh: `beli susu 7500`\n\n"
+                f"Bot pilih harga *tertinggi* saat waktu habis."
             )
             try:
                 bot.send_message(settings.TELEGRAM_GROUP_SUSU, msg, parse_mode="Markdown")

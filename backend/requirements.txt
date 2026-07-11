@@ -21,6 +21,7 @@ pyTelegramBotAPI>=4.21.0
 
 # PDF Generation
 xhtml2pdf>=0.2.16
+reportlab>=4.0.0
 
 # QR Code
 qrcode[pil]>=7.4

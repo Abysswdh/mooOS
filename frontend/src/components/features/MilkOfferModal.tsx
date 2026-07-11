@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -23,9 +23,10 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { apiPost } from '@/lib/api';
+import { apiGet, apiPost } from '@/lib/api';
 import { toastSuccess, toastError } from '@/lib/notify';
-import { Plus } from 'lucide-react';
+import { TodayPricesSummary } from '@/types';
+import { Plus, Info } from 'lucide-react';
 
 const milkOfferSchema = z.object({
   quantity_liters: z.coerce.number().min(1, 'Kuantitas harus lebih dari 0'),
@@ -37,6 +38,8 @@ const milkOfferSchema = z.object({
 export function MilkOfferModal() {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [marketMilkPrice, setMarketMilkPrice] = useState<number | null>(null);
+  const [isLoadingPrice, setIsLoadingPrice] = useState(false);
 
   const form = useForm<z.infer<typeof milkOfferSchema>>({
     resolver: zodResolver(milkOfferSchema),
@@ -48,6 +51,30 @@ export function MilkOfferModal() {
     },
   });
 
+  // Auto-fill price from latest market data when modal opens
+  useEffect(() => {
+    if (!open) return;
+
+    const fetchMarketPrice = async () => {
+      setIsLoadingPrice(true);
+      try {
+        const data = await apiGet<TodayPricesSummary>('/prices/today');
+        if (data.susu?.price_per_unit) {
+          const bestPrice = data.susu.price_per_unit;
+          setMarketMilkPrice(bestPrice);
+          form.setValue('price_per_liter', bestPrice);
+        }
+      } catch (err) {
+        // Silently fail — user can still enter price manually
+        console.warn('Could not load market price for milk:', err);
+      } finally {
+        setIsLoadingPrice(false);
+      }
+    };
+
+    fetchMarketPrice();
+  }, [open]);
+
   const onSubmit = async (values: z.infer<typeof milkOfferSchema>) => {
     setIsSubmitting(true);
     try {
@@ -56,6 +83,7 @@ export function MilkOfferModal() {
       toastSuccess('Lelang Penjualan Susu berhasil dibuka di Telegram');
       setOpen(false);
       form.reset();
+      setMarketMilkPrice(null);
       
       // refresh data
       window.location.reload();
@@ -98,6 +126,17 @@ export function MilkOfferModal() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Harga Dasar (per Liter) *</FormLabel>
+                  {marketMilkPrice !== null && (
+                    <div className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded px-2 py-1.5">
+                      <Info className="h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        Harga pasar susu terkini: <strong>Rp{marketMilkPrice.toLocaleString('id-ID')}/liter</strong>. Anda dapat mengubahnya.
+                      </span>
+                    </div>
+                  )}
+                  {isLoadingPrice && (
+                    <p className="text-xs text-muted-foreground">Memuat harga pasar...</p>
+                  )}
                   <FormControl>
                     <div className="relative">
                       <span className="absolute left-3 top-2.5 text-muted-foreground">Rp</span>

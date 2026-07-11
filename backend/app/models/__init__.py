@@ -31,6 +31,7 @@ from app.models.telegram_contact import TelegramContact, TelegramContactRole
 from app.models.health_log import HealthLog, HealthEventType
 from app.models.settings import SystemSettings
 from app.models.auction import AuctionBid, AuctionItemType
+from app.models.invoice import Invoice
 
 __all__ = [
     # User
@@ -87,4 +88,6 @@ __all__ = [
     # Auction
     "AuctionBid",
     "AuctionItemType",
+    # Invoice
+    "Invoice",
 ]
